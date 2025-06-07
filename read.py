@@ -4,7 +4,13 @@ import os, time
 
 BUF_SIZE = 64
 
-f = os.open("test", os.O_RDWR | os.O_NONBLOCK)
+def create(path):
+    if not os.path.exists(path):
+        os.mkfifo(path)
+
+create("pipes/O_log_test")
+
+f = os.open("pipes/O_log_test", os.O_RDWR | os.O_NONBLOCK)
 
 while True:
     try:

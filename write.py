@@ -6,9 +6,9 @@ def create(path):
     if not os.path.exists(path):
         os.mkfifo(path)
 
-create("test")
+create("pipes/I_log_test")
 
-f = os.open("test", os.O_NONBLOCK | os.O_RDWR)
+f = os.open("pipes/I_log_test", os.O_NONBLOCK | os.O_RDWR)
 
 while True:
     try:
