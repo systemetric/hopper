@@ -9,7 +9,7 @@ Pipe naming scheme:
     - Fields seperated by underscores (_)
     - Fields:
         I/O     = Input or output 
-        handler = Handler string
+        handler = Handler string, cannot contain underscores
         id      = ID of the pipe 
     - Example: I_log_test
         I       = Input pipe
@@ -80,18 +80,15 @@ class Mux:
         if d == None:
             return
 
-        print(f"[{p.name}] {d} => ", end="")
-
         for op in t:
             out = op.handler.get_output(d)
-            print(op.name, end=" ")
             op.write(out)
         
         print()
 
 m = Mux("pipes")
 m.add_handler(LogHandler())
-m.add_handler(FullLogHandler("temp-log.txt"))
+m.add_handler(FullLogHandler())
 
 while 1:
     m.cycle()
