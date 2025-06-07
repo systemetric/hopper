@@ -2,11 +2,29 @@
 
 import os
 from pipe import *
+from handler import *
+
+"""
+Pipe naming scheme:
+    - Fields seperated by underscores (_)
+    - Fields:
+        I/O     = Input or output 
+        handler = Handler string
+        id      = ID of the pipe 
+    - Example: I_log_test
+        I       = Input pipe
+        log     = Log pipe handler
+        test    = Pipe ID
+"""
 
 class Mux:
     def __init__(self, pipe_dir):
         self.pipe_dir = pipe_dir
         self.pipes = []
+        self.handlers = {}
+
+    def add_handler(self, h):
+        self.handlers[h.type] = h
 
     def cycle(self):
         self.scan()
@@ -23,7 +41,14 @@ class Mux:
         for p in new_pipes:
             if not p in self.getMatchingPipeNames(p):
                 path = self.pipe_dir + "/" + p
-                self.pipes.append(Pipe(p, path))
+                pipe = Pipe(p, path)
+
+                try:
+                    pipe.assign_handler(self.handlers[pipe.type])
+                except KeyError:
+                    continue
+
+                self.pipes.append(pipe)
                 print(f"Added {p}")
 
     def updatePipes(self):
@@ -58,12 +83,15 @@ class Mux:
         print(f"[{p.name}] {d} => ", end="")
 
         for op in t:
+            out = op.handler.get_output(d)
             print(op.name, end=" ")
-            op.write(d)
+            op.write(out)
         
         print()
 
 m = Mux("pipes")
+m.add_handler(LogHandler())
+m.add_handler(FullLogHandler("temp-log.txt"))
 
 while 1:
     m.cycle()

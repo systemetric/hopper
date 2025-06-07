@@ -7,6 +7,7 @@ class PipeType:
 class Pipe:
     BUF_SIZE = 64
     fd = 0
+    handler = None
 
     def __init__(self, name, path):
         self.name = name
@@ -18,6 +19,9 @@ class Pipe:
             self.fd = os.open(path, os.O_NONBLOCK | os.O_RDWR)
         else:
             raise FileNotFoundError(path)
+        
+    def assign_handler(self, handler):
+        self.handler = handler
         
     def parse(self, name):
         p = name.split("_")
