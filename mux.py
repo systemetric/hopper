@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import os, threading, time, enum
+import os
 from pipe import *
 
 class Mux:
@@ -60,6 +60,8 @@ class Mux:
         for op in t:
             print(op.name, end=" ")
             op.write(d)
+        
+        print()
 
 m = Mux("pipes")
 
