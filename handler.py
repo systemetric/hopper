@@ -32,9 +32,12 @@ class CompleteLogHandler(PipeHandler):
         super().__init__("complog")
 
     def get_output(self, input):
-        buf = self.f.read()
-        buf += input
+        self.f.seek(0, os.SEEK_END)
         self.f.write(input)
+        self.f.flush()
+        self.f.seek(0)
+        
+        buf = self.f.read()
 
         return buf
 

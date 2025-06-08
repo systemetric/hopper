@@ -83,8 +83,6 @@ class Mux:
         for op in t:
             out = op.handler.get_output(d)
             op.write(out)
-        
-        print()
 
 m = Mux("pipes")
 
