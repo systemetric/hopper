@@ -87,8 +87,10 @@ class Mux:
         print()
 
 m = Mux("pipes")
+
 m.add_handler(LogHandler())
 m.add_handler(FullLogHandler())
+m.add_handler(CompleteLogHandler("tmplog.txt"))
 
 while 1:
     m.cycle()

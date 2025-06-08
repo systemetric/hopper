@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 
-import os, time
+import os, sys
 
 def create(path):
     if not os.path.exists(path):
         os.mkfifo(path)
 
-create("pipes/I_fulllog_test")
+create(sys.argv[1])
 
-f = os.open("pipes/I_fulllog_test", os.O_NONBLOCK | os.O_RDWR)
+f = os.open(sys.argv[1], os.O_NONBLOCK | os.O_RDWR)
 
 while True:
     try:

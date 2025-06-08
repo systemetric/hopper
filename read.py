@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import os, time
+import os, sys
 
 BUF_SIZE = 64
 
@@ -8,9 +8,9 @@ def create(path):
     if not os.path.exists(path):
         os.mkfifo(path)
 
-create("pipes/O_fulllog_test")
+create(sys.argv[1])
 
-f = os.open("pipes/O_fulllog_test", os.O_RDWR | os.O_NONBLOCK)
+f = os.open(sys.argv[1], os.O_RDWR | os.O_NONBLOCK)
 
 while True:
     try:

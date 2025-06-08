@@ -25,3 +25,18 @@ class FullLogHandler(PipeHandler):
 
         return self.buf
 
+class CompleteLogHandler(PipeHandler):
+    def __init__(self, file):
+        self.f = open(file, "ab+")
+
+        super().__init__("complog")
+
+    def get_output(self, input):
+        buf = self.f.read()
+        buf += input
+        self.f.write(input)
+
+        return buf
+
+    def __del__(self):
+        self.f.close()
