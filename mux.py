@@ -3,6 +3,7 @@
 import os
 from pipe import *
 from handler import *
+from spec import *
 
 """
 Pipe naming scheme:
@@ -22,6 +23,7 @@ class Mux:
         self.pipe_dir = pipe_dir
         self.pipes = []
         self.handlers = {}
+        self.spec = getHandlerSpec()
 
     def add_handler(self, h):
         self.handlers[h.type] = h
@@ -43,6 +45,9 @@ class Mux:
                 path = self.pipe_dir + "/" + p
                 pipe = Pipe(p, path)
 
+                if pipe.pipe_type == PipeType.INPUT and pipe.type not in self.spec:
+                    raise
+
                 try:
                     pipe.assign_handler(self.handlers[pipe.type])
                 except KeyError:
@@ -57,20 +62,10 @@ class Mux:
                 self.processPipe(p)
 
     def getMatchingPipeNames(self, name):
-        ps = []
-        for p in self.pipes:
-            if p.name == name:
-                ps.append(p.name)
-
-        return ps
+        return [p.name for p in self.pipes if p.name == name]
 
     def getMatchingPipeTypes(self, pipe):
-        ps = []
-        for p in self.pipes:
-            if p.type == pipe.type and p.pipe_type == PipeType.OUTPUT:
-                ps.append(p)
-
-        return ps
+        return [p for p in self.pipes if p.type in self.spec[pipe.type] and p.pipe_type == PipeType.OUTPUT]
 
     def processPipe(self, p):
         t = self.getMatchingPipeTypes(p)
