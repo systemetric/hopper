@@ -1,6 +1,6 @@
 import os
 
-from spec import HandlerTypes
+from server.spec import HandlerTypes
 
 class PipeHandler:
     def __init__(self, type):

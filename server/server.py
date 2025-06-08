@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
 import os
-from pipe import *
-from handler import *
-from spec import *
+from server.pipe import *
+from server.handler import *
+from server.spec import *
 
 """
 Pipe naming scheme:
@@ -79,11 +79,7 @@ class Mux:
             out = op.handler.get_output(d)
             op.write(out)
 
-m = Mux("pipes")
-
-m.add_handler(LogHandler())
-m.add_handler(FullLogHandler())
-m.add_handler(CompleteLogHandler("tmplog.txt"))
-
-while 1:
-    m.cycle()
+def registerDefaultHandlers(m):
+    m.add_handler(LogHandler())
+    m.add_handler(FullLogHandler())
+    m.add_handler(CompleteLogHandler("tmplog.txt"))
