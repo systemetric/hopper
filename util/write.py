@@ -1,21 +1,17 @@
 #!/usr/bin/python3
 
 import os, sys
+from client import *
+from common import *
 
-def create(path):
-    if not os.path.exists(path):
-        os.mkfifo(path)
-
-create(sys.argv[1])
-
-f = os.open(sys.argv[1], os.O_NONBLOCK | os.O_RDWR)
+root, name = os.path.split(sys.argv[1])
+pn = PipeName(name, root)
+c = RcMuxClient(pn)
 
 while True:
     try:
         s = input()
         b = bytes(s, "utf-8") + b'\n'
-        os.write(f, b)
+        c.write(b)
     except:
         break;
-
-os.close(f)

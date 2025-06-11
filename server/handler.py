@@ -1,6 +1,14 @@
 import os
 
-from server.spec import HandlerTypes
+from .spec import HandlerTypes
+
+"""
+Handlers produce the output given to pipes.
+They all inherit from `PipeHandler`. When generating a message,
+`get_output` is called, with the data that was read from the
+input pipe as a byte string. `get_output` returns a byte string
+of data to write to corresponding output pipes.
+"""
 
 class PipeHandler:
     def __init__(self, type):
