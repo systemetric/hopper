@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 import os
+import logging
+
 from common import *
 from .handler import *
 from .spec import *
@@ -22,14 +24,16 @@ Pipe naming scheme:
 class RcMuxServer:
     __COOLDOWN = 1   # Time between re-scans to reduce CPU usage 
 
-    def __init__(self, pipe_dir):
+    def __init__(self, pipe_dir: str):
         self.__pipe_dir = pipe_dir
         self.__pipes = []
         self.__handlers = {}
         self.__spec = get_handler_spec()
+        logging.info("RcMuxServer initialized.")
 
-    def add_handler(self, h):
+    def add_handler(self, h: PipeHandler):
         self.__handlers[h.type] = h
+        logging.info(f"Added handler for '{h.type}'")
 
     def cycle(self):
         self.scan()
@@ -41,14 +45,15 @@ class RcMuxServer:
 
         # Remove pipes that no longer exist
         for p in self.__pipes:
-            if not p.pipe_name in new_pipes:
+            if not str(p.pipe_name) in new_pipes:
                 self.__pipes.remove(p)
-                print(f"Removed {p.pipe_name}")
+                logging.info(f"Removed '{p.pipe_path}'")
+
+        pipe_names = [str(p.pipe_name) for p in self.__pipes]
 
         # Add newly discovered pipes
         for p in new_pipes:
-            matches = self.get_pipes_by_name(p)
-            if not p in matches:
+            if not p in pipe_names:
                 pipe_name = PipeName(p, self.__pipe_dir)
                 pipe = Pipe(pipe_name)
 
@@ -56,19 +61,15 @@ class RcMuxServer:
 
                 # If an input pipe is not in the spec, we don't know what to do with its data
                 if pipe.type == PipeType.INPUT and pipe.handler_id not in self.__spec:
-                    raise
+                    logging.warning(f"No valid spec found for '{pipe.handler_id}'.")
 
                 self.__pipes.append(pipe)
-                print(f"Added {p}")
+                logging.info(f"Added pipe '{pipe_name.pipe_path}'")
 
     def update_pipes(self):
         for p in self.__pipes:
             if p.type == PipeType.INPUT:
                 self.update_pipe(p)
-
-    # Gets pipes whose name matches `name`
-    def get_pipes_by_name(self, name):
-        return [p.pipe_name for p in self.__pipes if p.pipe_name == name]
 
     # Gets output pipes from handlers defined in the spec file
     def get_pipes_by_handler_id(self, pipe):
@@ -81,14 +82,14 @@ class RcMuxServer:
         if d == None:
             return
 
-        print(f"{p.pipe_name} => ", end="")
+        s = f"{p.pipe_name} => "
 
         for op in t:
-            print(f"{op.pipe_name} ", end="")
+            s += str(op.pipe_name) + " "
             out = op.handler.get_output(d)
             op.write(out)
 
-        print("")
+        logging.info(s)
 
 def registerDefaultHandlers(m: RcMuxServer):
     m.add_handler(LogHandler())

@@ -66,7 +66,7 @@ class Pipe:
     def pipe_name(self):
         if self.__pn == None:
             return None
-        return str(self.__pn)
+        return self.__pn
     
     @property
     def pipe_path(self):

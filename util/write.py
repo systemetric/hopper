@@ -6,12 +6,13 @@ from common import *
 
 root, name = os.path.split(sys.argv[1])
 pn = PipeName(name, root)
-c = RcMuxClient(pn)
+c = RcMuxClient()
+c.open_pipe(pn)
 
 while True:
     try:
         s = input()
         b = bytes(s, "utf-8") + b'\n'
-        c.write(b)
+        c.write(pn, b)
     except:
         break;

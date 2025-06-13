@@ -31,6 +31,11 @@ class PipeName:
 
     def __str__(self):
         return f"{'I' if self.__type == PipeType.INPUT else 'O'}_{self.__handler_id}_{self.__id}"
+    
+    def __eq__(self, pn):
+        if not isinstance(pn, PipeName):
+            return NotImplemented
+        return (str(pn) == str(self)) and (pn.root_path == self.__root)
 
     @property
     def pipe_path(self):
