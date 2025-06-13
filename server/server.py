@@ -20,68 +20,72 @@ Pipe naming scheme:
 """
 
 class RcMuxServer:
-    COOLDOWN = 1
+    __COOLDOWN = 1   # Time between re-scans to reduce CPU usage 
 
     def __init__(self, pipe_dir):
-        self.pipe_dir = pipe_dir
-        self.pipes = []
-        self.handlers = {}
-        self.spec = getHandlerSpec()
+        self.__pipe_dir = pipe_dir
+        self.__pipes = []
+        self.__handlers = {}
+        self.__spec = getHandlerSpec()
 
     def add_handler(self, h):
-        self.handlers[h.type] = h
+        self.__handlers[h.type] = h
 
     def cycle(self):
         self.scan()
         self.updatePipes()
-        sleep(self.COOLDOWN)
+        sleep(self.__COOLDOWN)
 
     def scan(self):
-        new_pipes = os.listdir(self.pipe_dir)
+        new_pipes = os.listdir(self.__pipe_dir)
 
-        for p in self.pipes:
-            if not p.get_pipe_name() in new_pipes:
-                print(f"Removed {p.get_pipe_name()}")
-                self.pipes.remove(p)
+        # Remove pipes that no longer exist
+        for p in self.__pipes:
+            if not p.pipe_name in new_pipes:
+                self.__pipes.remove(p)
+                print(f"Removed {p.pipe_name}")
 
+        # Add newly discovered pipes
         for p in new_pipes:
             matches = self.getMatchingPipeNames(p)
             if not p in matches:
-                pipe_name = PipeName(p, self.pipe_dir)
+                pipe_name = PipeName(p, self.__pipe_dir)
                 pipe = Pipe(pipe_name)
 
-                pipe.set_handler(self.handlers)
+                pipe.set_handler(self.__handlers)
 
-                if pipe.get_type() == PipeType.INPUT and pipe.get_handler_id() not in self.spec:
+                # If an input pipe is not in the spec, we don't know what to do with its data
+                if pipe.type == PipeType.INPUT and pipe.handler_id not in self.__spec:
                     raise
 
-                self.pipes.append(pipe)
+                self.__pipes.append(pipe)
                 print(f"Added {p}")
 
     def updatePipes(self):
-        for p in self.pipes:
-            if p.get_type() == PipeType.INPUT:
+        for p in self.__pipes:
+            if p.type == PipeType.INPUT:
                 self.processPipe(p)
 
+    # Gets pipes whose name matches `name`
     def getMatchingPipeNames(self, name):
-        return [p.get_pipe_name() for p in self.pipes if p.get_pipe_name() == name]
+        return [p.pipe_name for p in self.__pipes if p.pipe_name == name]
 
+    # Gets output pipes from handlers defined in the spec file
     def getMatchingPipeTypes(self, pipe):
-        return [p for p in self.pipes if p.get_handler_id() in self.spec[pipe.get_handler_id()] and p.get_type() == PipeType.OUTPUT]
+        return [p for p in self.__pipes if p.handler_id in self.__spec[pipe.handler_id] and p.type == PipeType.OUTPUT]
 
     def processPipe(self, p: Pipe):
         t = self.getMatchingPipeTypes(p)
 
         d = p.read()
-
         if d == None:
             return
 
-        print(f"{p.get_pipe_name()} => ", end="")
+        print(f"{p.pipe_name} => ", end="")
 
         for op in t:
-            print(f"{op.get_pipe_name()} ", end="")
-            out = op.get_handler().get_output(d)
+            print(f"{op.pipe_name} ", end="")
+            out = op.handler.get_output(d)
             op.write(out)
 
         print("")

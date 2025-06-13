@@ -1,6 +1,5 @@
 import os
 
-from .pipe_type import PipeType
 from .pipe_name import PipeName
 
 class Pipe:
@@ -17,7 +16,7 @@ class Pipe:
         if self.__pn == None:
             return
 
-        pipe_path = self.__pn.get_pipe_path()
+        pipe_path = self.__pn.pipe_path
 
         if not os.path.exists(pipe_path) and create:
             os.mkfifo(pipe_path)
@@ -45,85 +44,45 @@ class Pipe:
     def __del__(self):
         self.close()
 
-    def get_type(self):
+    @property
+    def type(self):
         if self.__pn == None:
             return None
-        return self.__pn.get_type()
+        return self.__pn.type
     
-    def get_name(self):
+    @property
+    def id(self):
         if self.__pn == None:
             return None
-        return self.__pn.get_name()
+        return self.__pn.id
     
-    def get_handler_id(self):
+    @property
+    def handler_id(self):
         if self.__pn == None:
             return None
-        return self.__pn.get_handler_id()
+        return self.__pn.handler_id
     
-    def get_pipe_name(self):
+    @property
+    def pipe_name(self):
         if self.__pn == None:
             return None
         return str(self.__pn)
     
-    def get_pipe_path(self):
+    @property
+    def pipe_path(self):
         if self.__pn == None:
             return None
-        return self.__pn.get_pipe_path()
+        return self.__pn.pipe_path
 
     def set_handler(self, handlers):
         if self.__pn == None:
             raise ValueError("Bad pipe name")
         
         try:
-            self.__handler = handlers[self.__pn.get_handler_id()]
+            self.__handler = handlers[self.__pn.handler_id]
         except:
             raise
 
-    def get_handler(self):
+    @property
+    def handler(self):
         return self.__handler
-
-
-class PipeOld:
-    BUF_SIZE = 64
-    fd = 0
-    handler = None
-
-    def __init__(self, name, path):
-        self.name = name
-        self.path = path
-
-        self.parse(name)
-
-        if os.path.exists(path):
-            self.fd = os.open(path, os.O_NONBLOCK | os.O_RDWR)
-        else:
-            raise FileNotFoundError(path)
-        
-    def assign_handler(self, handler):
-        self.handler = handler
-        
-    def parse(self, name):
-        p = name.split("_")
-        self.pipe_type = PipeType.INPUT if p[0] == "I" else PipeType.OUTPUT
-        self.type = p[1]
-        self.id = p[2]
-        
-    def read(self):
-        if self.pipe_type != PipeType.INPUT:
-            raise
-        
-        try:
-            buf = os.read(self.fd, self.BUF_SIZE)
-        except:
-            return None
-
-        return buf
-
-    def write(self, data):
-        try:
-            os.write(self.fd, data)
-        except:
-            raise
-
-    def __del__(self):
-        os.close(self.fd)
