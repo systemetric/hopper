@@ -26,14 +26,14 @@ class RcMuxServer:
         self.__pipe_dir = pipe_dir
         self.__pipes = []
         self.__handlers = {}
-        self.__spec = getHandlerSpec()
+        self.__spec = get_handler_spec()
 
     def add_handler(self, h):
         self.__handlers[h.type] = h
 
     def cycle(self):
         self.scan()
-        self.updatePipes()
+        self.update_pipes()
         sleep(self.__COOLDOWN)
 
     def scan(self):
@@ -47,7 +47,7 @@ class RcMuxServer:
 
         # Add newly discovered pipes
         for p in new_pipes:
-            matches = self.getMatchingPipeNames(p)
+            matches = self.get_pipes_by_name(p)
             if not p in matches:
                 pipe_name = PipeName(p, self.__pipe_dir)
                 pipe = Pipe(pipe_name)
@@ -61,21 +61,21 @@ class RcMuxServer:
                 self.__pipes.append(pipe)
                 print(f"Added {p}")
 
-    def updatePipes(self):
+    def update_pipes(self):
         for p in self.__pipes:
             if p.type == PipeType.INPUT:
-                self.processPipe(p)
+                self.update_pipe(p)
 
     # Gets pipes whose name matches `name`
-    def getMatchingPipeNames(self, name):
+    def get_pipes_by_name(self, name):
         return [p.pipe_name for p in self.__pipes if p.pipe_name == name]
 
     # Gets output pipes from handlers defined in the spec file
-    def getMatchingPipeTypes(self, pipe):
+    def get_pipes_by_handler_id(self, pipe):
         return [p for p in self.__pipes if p.handler_id in self.__spec[pipe.handler_id] and p.type == PipeType.OUTPUT]
 
-    def processPipe(self, p: Pipe):
-        t = self.getMatchingPipeTypes(p)
+    def update_pipe(self, p: Pipe):
+        t = self.get_pipes_by_handler_id(p)
 
         d = p.read()
         if d == None:

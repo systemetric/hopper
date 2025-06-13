@@ -20,7 +20,7 @@ class HandlerTypes:
     FULL_LOG = "fulllog"
     COMPLETE_LOG = "complog"
 
-def getHandlerSpec():
+def get_handler_spec():
     return {
         HandlerTypes.LOG: [
             HandlerTypes.LOG,
