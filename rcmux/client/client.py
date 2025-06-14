@@ -7,11 +7,11 @@ class RcMuxClient:
         """
         self.__pipes = []
 
-    def open_pipe(self, pn, create = True, delete = False):
+    def open_pipe(self, pn, create = True, delete = False, blocking = False):
         """
         Open a pipe specified by a PipeName `pn`.
         """
-        pipe = Pipe(pn, create=create, delete=delete)
+        pipe = Pipe(pn, create=create, delete=delete, blocking=blocking)
         self.__pipes.append(pipe)
 
     def close_pipe(self, pn):

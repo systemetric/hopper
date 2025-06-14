@@ -2,16 +2,23 @@ import os
 
 from .pipe_name import PipeName
 
+"""
+Pipe class:
+    Represents a single input/output pipe.
+    Implements basic read/write operations.
+"""
+
 class Pipe:
     __BUF_SIZE = 64
     __fd = 0
     __pn = None
     __handler = None
 
-    def __init__(self, pn: PipeName, create = False, delete = False):
+    def __init__(self, pn: PipeName, create = False, delete = False, blocking = False):
         self.__pn = pn
         self.__create = create
         self.__delete = delete
+        self.__blocking = blocking
         self.__open()
 
     def __open(self):
@@ -25,7 +32,10 @@ class Pipe:
         elif not os.path.exists(pipe_path):
             raise FileNotFoundError(f"Cannot find pipe at '{pipe_path}'.")
 
-        self.__fd = os.open(pipe_path, os.O_NONBLOCK | os.O_RDWR)
+        flags = os.O_RDWR
+        flags |= (0 if self.__blocking else os.O_NONBLOCK)
+        
+        self.__fd = os.open(pipe_path, flags)
 
     def read(self):
         try:
