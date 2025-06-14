@@ -8,17 +8,19 @@ class Pipe:
     __pn = None
     __handler = None
 
-    def __init__(self, pn: PipeName, create = False):
+    def __init__(self, pn: PipeName, create = False, delete = False):
         self.__pn = pn
-        self.__open(create=create)
+        self.__create = create
+        self.__delete = delete
+        self.__open()
 
-    def __open(self, create = False):
+    def __open(self):
         if self.__pn == None:
             return
 
         pipe_path = self.__pn.pipe_path
 
-        if not os.path.exists(pipe_path) and create:
+        if not os.path.exists(pipe_path) and self.__create:
             os.mkfifo(pipe_path)
         elif not os.path.exists(pipe_path):
             raise FileNotFoundError(f"Cannot find pipe at '{pipe_path}'.")
@@ -39,7 +41,12 @@ class Pipe:
             raise
 
     def close(self):
+        if self.__pn == None:
+            return
+        
         os.close(self.__fd)
+        if self.__delete:
+            os.remove(self.__pn.pipe_path)
 
     def __del__(self):
         self.close()

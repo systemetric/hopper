@@ -57,3 +57,11 @@ class CompleteLogHandler(PipeHandler):
 
     def __del__(self):
         self.f.close()
+
+class StartButtonHandler(PipeHandler):
+    def __init__(self):
+        super().__init__(HandlerTypes.START_BUTTON)
+
+    def get_output(self, input):
+        print(f"StartButtonHandler: '{input.decode('utf-8')}'")
+        return input

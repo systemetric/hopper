@@ -19,6 +19,7 @@ class HandlerTypes:
     LOG = "log"
     FULL_LOG = "fulllog"
     COMPLETE_LOG = "complog"
+    START_BUTTON = "start-button"
 
 def get_handler_spec():
     return {

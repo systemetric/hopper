@@ -3,7 +3,7 @@
 import os
 import logging
 
-from common import *
+from rcmux.common import *
 from .handler import *
 from .spec import *
 from time import sleep
@@ -25,6 +25,9 @@ class RcMuxServer:
     __COOLDOWN = 1   # Time between re-scans to reduce CPU usage 
 
     def __init__(self, pipe_dir: str):
+        """
+        Initialize a new RcMuxServer.
+        """
         self.__pipe_dir = pipe_dir
         self.__pipes = []
         self.__handlers = {}
@@ -32,15 +35,24 @@ class RcMuxServer:
         logging.info("RcMuxServer initialized.")
 
     def add_handler(self, h: PipeHandler):
+        """
+        Add handler `h` as a pipe handler for the server.
+        """
         self.__handlers[h.type] = h
         logging.info(f"Added handler for '{h.type}'")
 
     def cycle(self):
+        """
+        Run a single scan-update-cooldown cycle.
+        """
         self.scan()
         self.update_pipes()
         sleep(self.__COOLDOWN)
 
     def scan(self):
+        """
+        Scan for new pipes and remove old pipes from the server's pipe list.
+        """
         new_pipes = os.listdir(self.__pipe_dir)
 
         # Remove pipes that no longer exist
@@ -76,6 +88,9 @@ class RcMuxServer:
         return [p for p in self.__pipes if p.handler_id in self.__spec[pipe.handler_id] and p.type == PipeType.OUTPUT]
 
     def update_pipe(self, p: Pipe):
+        """
+        Read content from pipe `p` and send it to corresponding output handlers.
+        """
         t = self.get_pipes_by_handler_id(p)
 
         d = p.read()
@@ -92,6 +107,13 @@ class RcMuxServer:
         logging.info(s)
 
 def registerDefaultHandlers(m: RcMuxServer):
+    """
+    Register the default pipe handlers with the server `m`:
+     - LogHandler
+     - FullLogHandler
+     - CompleteLogHandler
+    """
     m.add_handler(LogHandler())
     m.add_handler(FullLogHandler())
     m.add_handler(CompleteLogHandler("tmplog.txt"))
+    m.add_handler(StartButtonHandler())
