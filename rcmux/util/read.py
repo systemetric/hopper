@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
 import time, sys, os
-from client import *
-from common import *
+from rcmux.client import *
+from rcmux.common import *
 
 root, name = os.path.split(sys.argv[1])
 pn = PipeName(name, root)

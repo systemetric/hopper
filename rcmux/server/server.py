@@ -60,6 +60,9 @@ class RcMuxServer:
             if not str(p.pipe_name) in new_pipes:
                 self.__pipes.remove(p)
                 logging.info(f"Removed '{p.pipe_path}'")
+            elif p.inode_number != os.stat(p.pipe_path).st_ino:
+                self.__pipes.remove(p)
+                logging.info(f"Removed '{p.pipe_path}'")
 
         pipe_names = [str(p.pipe_name) for p in self.__pipes]
 

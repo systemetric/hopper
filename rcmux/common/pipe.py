@@ -36,6 +36,7 @@ class Pipe:
         flags |= (0 if self.__blocking else os.O_NONBLOCK)
         
         self.__fd = os.open(pipe_path, flags)
+        self.__inode_number = os.stat(pipe_path).st_ino
 
     def read(self):
         try:
@@ -103,3 +104,7 @@ class Pipe:
     @property
     def handler(self):
         return self.__handler
+    
+    @property
+    def inode_number(self):
+        return self.__inode_number

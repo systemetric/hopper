@@ -8,7 +8,7 @@
             "name": "Run RcMux Server",
             "type": "debugpy",
             "request": "launch",
-            "module": "server",
+            "module": "rcmux.server",
             "args": ["pipes"]
         }
     ]
