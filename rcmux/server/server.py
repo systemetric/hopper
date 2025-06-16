@@ -88,7 +88,10 @@ class RcMuxServer:
 
     # Gets output pipes from handlers defined in the spec file
     def get_pipes_by_handler_id(self, pipe):
-        return [p for p in self.__pipes if p.handler_id in self.__spec[pipe.handler_id] and p.type == PipeType.OUTPUT]
+        if pipe.handler_id in self.__spec.keys():   # The handler ID is in the spec
+            return [p for p in self.__pipes if p.handler_id in self.__spec[pipe.handler_id] and p.type == PipeType.OUTPUT]
+        else:
+            return [p for p in self.__pipes if p.handler_id == pipe.handler_id and p.type == PipeType.OUTPUT]
 
     def update_pipe(self, p: Pipe):
         """
