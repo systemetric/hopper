@@ -26,6 +26,9 @@ def get_handler_spec():
         HandlerTypes.LOG: [
             HandlerTypes.LOG,
             HandlerTypes.FULL_LOG,
-            HandlerTypes.COMPLETE_LOG
+            HandlerTypes.COMPLETE_LOG,
+        ],
+        HandlerTypes.START_BUTTON: [
+            HandlerTypes.START_BUTTON,
         ]
     }
