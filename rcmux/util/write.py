@@ -12,7 +12,7 @@ c.open_pipe(pn)
 while True:
     try:
         s = input()
-        b = bytes(s, "utf-8") + b'\n'
+        b = bytes(s, "utf-8")
         c.write(pn, b)
     except:
         break;

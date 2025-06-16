@@ -48,10 +48,8 @@ class RcMuxClient:
         """
         Write `buf` to the PipeName specified by `pn`.
         """
-
-        print(f"writing to pipe: {buf.decode('utf-8')}")
         p = self.get_pipe_by_pipe_name(pn)
         if p == None:
             raise
 
-        return p.write(buf)
+        return p.write(buf + b'\n')
