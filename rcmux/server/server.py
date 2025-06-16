@@ -3,10 +3,11 @@
 import os
 import logging
 
+from time import sleep
+
 from rcmux.common import *
 from .handler import *
 from .spec import *
-from time import sleep
 
 """
 Pipe naming scheme:
