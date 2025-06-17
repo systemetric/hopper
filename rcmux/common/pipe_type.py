@@ -1,3 +1,3 @@
 class PipeType:
-    OUTPUT = 0
-    INPUT = 1
+    OUTPUT, RECEIVING = 0, 0
+    INPUT, SENDING = 1, 1
