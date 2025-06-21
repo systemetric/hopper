@@ -20,6 +20,7 @@ class HandlerTypes:
     FULL_LOG = "fulllog"
     COMPLETE_LOG = "complog"
     START_BUTTON = "start-button"
+    STARTER = "starter"
 
 def get_handler_spec():
     return {
@@ -30,5 +31,8 @@ def get_handler_spec():
         ],
         HandlerTypes.START_BUTTON: [
             HandlerTypes.START_BUTTON,
+        ],
+        HandlerTypes.STARTER: [
+            HandlerTypes.STARTER
         ]
     }

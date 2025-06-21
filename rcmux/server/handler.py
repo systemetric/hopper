@@ -65,3 +65,10 @@ class StartButtonHandler(PipeHandler):
     def get_output(self, input):
         print(f"StartButtonHandler: '{input.decode('utf-8')}'")
         return input
+    
+class StarterHandler(PipeHandler):
+    def __init__(self):
+        super().__init__("starter")
+
+    def get_output(self, input):
+        return input
