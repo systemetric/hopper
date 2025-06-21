@@ -60,10 +60,10 @@ class RcMuxServer:
         for p in self.__pipes:
             if not str(p.pipe_name) in new_pipes:
                 self.__pipes.remove(p)
-                logging.info(f"Removed '{p.pipe_path}'")
+                logging.info(f"Removed '{p.pipe_path}' ({p.inode_number})")
             elif p.inode_number != os.stat(p.pipe_path).st_ino:
                 self.__pipes.remove(p)
-                logging.info(f"Removed '{p.pipe_path}'")
+                logging.info(f"Removed '{p.pipe_path}' ({p.inode_number})")
 
         pipe_names = [str(p.pipe_name) for p in self.__pipes]
 
@@ -80,7 +80,7 @@ class RcMuxServer:
                     logging.warning(f"No valid spec found for '{pipe.handler_id}'.")
 
                 self.__pipes.append(pipe)
-                logging.info(f"Added pipe '{pipe_name.pipe_path}'")
+                logging.info(f"Added pipe '{pipe_name.pipe_path}' ({pipe.inode_number})")
 
     def update_pipes(self):
         for p in self.__pipes:
@@ -104,10 +104,10 @@ class RcMuxServer:
         if d == None:
             return
 
-        s = f"{p.pipe_name} => "
+        s = f"{p.pipe_name}({p.inode_number}) => "
 
         for op in t:
-            s += str(op.pipe_name) + " "
+            s += str(op.pipe_name) + f"({op.inode_number}) "
             out = op.handler.get_output(d)
             op.write(out)
 
@@ -124,3 +124,4 @@ def registerDefaultHandlers(m: RcMuxServer):
     m.add_handler(FullLogHandler())
     m.add_handler(CompleteLogHandler("tmplog.txt"))
     m.add_handler(StartButtonHandler())
+    m.add_handler(StarterHandler())
