@@ -23,7 +23,7 @@ Pipe naming scheme:
 """
 
 class RcMuxServer:
-    __COOLDOWN = 1   # Time between re-scans to reduce CPU usage 
+    __COOLDOWN = 0.25   # Time between re-scans to reduce CPU usage 
 
     def __init__(self, pipe_dir: str):
         """
