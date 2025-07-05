@@ -71,7 +71,7 @@ class RcMuxServer:
         for p in new_pipes:
             if not p in pipe_names:
                 pipe_name = PipeName(p, self.__pipe_dir)
-                pipe = Pipe(pipe_name)
+                pipe = Pipe(pipe_name, use_read_buffer=False)   # Explicitly disable the read buffer so we don't crash the server
 
                 pipe.set_handler(self.__handlers)
 

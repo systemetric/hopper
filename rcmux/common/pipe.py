@@ -14,11 +14,18 @@ class Pipe:
     __pn = None
     __handler = None
 
-    def __init__(self, pn: PipeName, create = False, delete = False, blocking = False):
+    def __init__(self, pn: PipeName, create = False, delete = False, blocking = False, use_read_buffer = False, read_buffer_terminator = b'\n'):
         self.__pn = pn
         self.__create = create
         self.__delete = delete
         self.__blocking = blocking
+        self.__use_read_buffer = use_read_buffer
+        self.__read_buffer_terminator = read_buffer_terminator
+
+        # The read buffer with non-blocking I/O, blocks, but not nicely
+        if not self.__blocking and self.__use_read_buffer:
+            print("WARN: Buffered reads with non-blocking I/O can crash the brain!")    
+
         self.__open()
 
     def __open(self):
@@ -39,6 +46,21 @@ class Pipe:
         self.__inode_number = os.stat(pipe_path).st_ino
 
     def read(self):
+        if self.__use_read_buffer:
+            buf = b''
+            # Consume greedily, until we reach the terminator
+            while True:
+                try:
+                    b = os.read(self.__fd, 1)
+                    buf += b
+                    if b == self.__read_buffer_terminator:
+                        break
+                except BlockingIOError:
+                    continue
+                except:
+                    return None
+            return buf
+        
         try:
             buf = os.read(self.__fd, self.__BUF_SIZE)
         except:
