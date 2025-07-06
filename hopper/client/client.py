@@ -1,9 +1,9 @@
-from rcmux.common import *
+from hopper.common import *
 
-class RcMuxClient:
+class HopperClient:
     def __init__(self):
         """
-        Initialize a new RcMuxClient.
+        Initialize a new HopperClient.
         """
         self.__pipes = []
 

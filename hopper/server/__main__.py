@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     
-    m = RcMuxServer(sys.argv[1])
+    m = HopperServer(sys.argv[1])
     registerDefaultHandlers(m)
 
     while True:

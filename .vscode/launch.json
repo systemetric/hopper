@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run RcMux Server",
+            "name": "Run Hopper Server",
             "type": "debugpy",
             "request": "launch",
-            "module": "rcmux.server",
+            "module": "hopper.server",
             "args": ["pipes"]
         }
     ]

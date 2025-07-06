@@ -5,7 +5,7 @@ import logging
 
 from time import sleep
 
-from rcmux.common import *
+from hopper.common import *
 from .handler import *
 from .spec import *
 
@@ -22,18 +22,18 @@ Pipe naming scheme:
         test    = Pipe ID
 """
 
-class RcMuxServer:
+class HopperServer:
     __COOLDOWN = 0.25   # Time between re-scans to reduce CPU usage 
 
     def __init__(self, pipe_dir: str):
         """
-        Initialize a new RcMuxServer.
+        Initialize a new HopperServer.
         """
         self.__pipe_dir = pipe_dir
         self.__pipes = []
         self.__handlers = {}
         self.__spec = get_handler_spec()
-        logging.info("RcMuxServer initialized.")
+        logging.info("HopperServer initialized.")
 
     def add_handler(self, h: PipeHandler):
         """
@@ -113,7 +113,7 @@ class RcMuxServer:
 
         logging.info(s)
 
-def registerDefaultHandlers(m: RcMuxServer):
+def registerDefaultHandlers(m: HopperServer):
     """
     Register the default pipe handlers with the server `m`:
      - LogHandler

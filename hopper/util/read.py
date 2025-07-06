@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 
 import time, sys, os
-from rcmux.client import *
-from rcmux.common import *
+from hopper.client import *
+from hopper.common import *
 
 root, name = os.path.split(sys.argv[1])
 pn = PipeName(name, root)
-c = RcMuxClient()
+c = HopperClient()
 c.open_pipe(pn)
 
 while True:
