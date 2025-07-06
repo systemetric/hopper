@@ -128,5 +128,9 @@ class Pipe:
         return self.__handler
     
     @property
+    def fd(self):
+        return self.__fd
+    
+    @property
     def inode_number(self):
         return self.__inode_number
