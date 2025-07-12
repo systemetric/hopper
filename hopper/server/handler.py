@@ -10,16 +10,19 @@ input pipe as a byte string. `get_output` returns a byte string
 of data to write to corresponding output pipes.
 """
 
+
 class PipeHandler:
     def __init__(self, type):
         self.type = type
 
     def get_output(self, input):
         return input
-    
+
+
 class GenericHandler(PipeHandler):
     def __init__(self):
         super().__init__(HandlerTypes.GENERIC)
+
 
 class LogHandler(PipeHandler):
     def __init__(self):
@@ -27,7 +30,8 @@ class LogHandler(PipeHandler):
 
     def get_output(self, input):
         return input
-    
+
+
 class FullLogHandler(PipeHandler):
     def __init__(self):
         self.buf = b''
@@ -38,6 +42,7 @@ class FullLogHandler(PipeHandler):
         self.buf += input
 
         return self.buf
+
 
 class CompleteLogHandler(PipeHandler):
     def __init__(self, file):
@@ -58,6 +63,7 @@ class CompleteLogHandler(PipeHandler):
     def __del__(self):
         self.f.close()
 
+
 class StartButtonHandler(PipeHandler):
     def __init__(self):
         super().__init__(HandlerTypes.START_BUTTON)
@@ -65,10 +71,16 @@ class StartButtonHandler(PipeHandler):
     def get_output(self, input):
         print(f"StartButtonHandler: '{input.decode('utf-8')}'")
         return input
-    
+
+
 class StarterHandler(PipeHandler):
     def __init__(self):
         super().__init__("starter")
 
     def get_output(self, input):
         return input
+
+
+class HardwareHandler(PipeHandler):
+    def __init__(self):
+        super().__init__("hardware")

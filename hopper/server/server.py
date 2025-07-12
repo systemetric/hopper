@@ -22,8 +22,9 @@ Pipe naming scheme:
         test    = Pipe ID
 """
 
+
 class HopperServer:
-    __COOLDOWN = 0.25   # Time between re-scans to reduce CPU usage 
+    __COOLDOWN = 0.25   # Time between re-scans to reduce CPU usage
 
     def __init__(self, pipe_dir: str):
         """
@@ -71,16 +72,19 @@ class HopperServer:
         for p in new_pipes:
             if not p in pipe_names:
                 pipe_name = PipeName(p, self.__pipe_dir)
-                pipe = Pipe(pipe_name, use_read_buffer=False)   # Explicitly disable the read buffer so we don't crash the server
+                # Explicitly disable the read buffer so we don't crash the server
+                pipe = Pipe(pipe_name, use_read_buffer=False)
 
                 pipe.set_handler(self.__handlers)
 
                 # If an input pipe is not in the spec, we don't know what to do with its data
                 if pipe.type == PipeType.INPUT and pipe.handler_id not in self.__spec:
-                    logging.warning(f"No valid spec found for '{pipe.handler_id}'.")
+                    logging.warning(
+                        f"No valid spec found for '{pipe.handler_id}'.")
 
                 self.__pipes.append(pipe)
-                logging.info(f"Added pipe '{pipe_name.pipe_path}' ({pipe.inode_number})")
+                logging.info(
+                    f"Added pipe '{pipe_name.pipe_path}' ({pipe.inode_number})")
 
     def update_pipes(self):
         for p in self.__pipes:
@@ -113,6 +117,7 @@ class HopperServer:
 
         logging.info(s)
 
+
 def registerDefaultHandlers(m: HopperServer):
     """
     Register the default pipe handlers with the server `m`:
@@ -120,8 +125,7 @@ def registerDefaultHandlers(m: HopperServer):
      - FullLogHandler
      - CompleteLogHandler
     """
-    m.add_handler(LogHandler())
-    m.add_handler(FullLogHandler())
-    m.add_handler(CompleteLogHandler("tmplog.txt"))
-    m.add_handler(StartButtonHandler())
-    m.add_handler(StarterHandler())
+    handlers = [LogHandler(), FullLogHandler(), StartButtonHandler(),
+                StarterHandler(), HardwareHandler()]
+    for h in handlers:
+        m.add_handler(h)
