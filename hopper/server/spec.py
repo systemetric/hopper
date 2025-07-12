@@ -14,6 +14,7 @@ All output handlers listed will recieve messages sent to "log".
 This allows input data to be handled in different ways depending on where is needs to to.
 """
 
+
 class HandlerTypes:
     GENERIC = "gen"
     LOG = "log"
@@ -21,6 +22,8 @@ class HandlerTypes:
     COMPLETE_LOG = "complog"
     START_BUTTON = "start-button"
     STARTER = "starter"
+    HARDWARE = "hardware"
+
 
 def get_handler_spec():
     return {
@@ -34,5 +37,8 @@ def get_handler_spec():
         ],
         HandlerTypes.STARTER: [
             HandlerTypes.STARTER
+        ],
+        HandlerTypes.HARDWARE: [
+            HandlerTypes.HARDWARE
         ]
     }
