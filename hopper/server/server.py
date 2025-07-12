@@ -59,12 +59,17 @@ class HopperServer:
 
         # Remove pipes that no longer exist
         for p in self.__pipes:
-            if not str(p.pipe_name) in new_pipes:
-                self.__pipes.remove(p)
-                logging.info(f"Removed '{p.pipe_path}' ({p.inode_number})")
-            elif p.inode_number != os.stat(p.pipe_path).st_ino:
-                self.__pipes.remove(p)
-                logging.info(f"Removed '{p.pipe_path}' ({p.inode_number})")
+            try:
+                if not str(p.pipe_name) in new_pipes:
+                    self.__pipes.remove(p)
+                    logging.info(f"Removed '{p.pipe_path}' ({p.inode_number})")
+                elif p.inode_number != os.stat(p.pipe_path).st_ino:
+                    self.__pipes.remove(p)
+                    logging.info(f"Removed '{p.pipe_path}' ({p.inode_number})")
+            except FileNotFoundError:
+                logging.warning(
+                    f"'{p.pipe_path}' ({p.inode_number}) disappeared unexpectedly.")
+                continue
 
         pipe_names = [str(p.pipe_name) for p in self.__pipes]
 
@@ -94,9 +99,9 @@ class HopperServer:
     # Gets output pipes from handlers defined in the spec file
     def get_pipes_by_handler_id(self, pipe):
         if pipe.handler_id in self.__spec.keys():   # The handler ID is in the spec
-            return [p for p in self.__pipes if p.handler_id in self.__spec[pipe.handler_id] and p.type == PipeType.OUTPUT]
+            return [p for p in self.__pipes if p.handler_id in self.__spec[pipe.handler_id] and p.type == PipeType.OUTPUT and p.id != pipe.id]
         else:
-            return [p for p in self.__pipes if p.handler_id == pipe.handler_id and p.type == PipeType.OUTPUT]
+            return [p for p in self.__pipes if p.handler_id == pipe.handler_id and p.type == PipeType.OUTPUT and p.id != pipe.id]
 
     def update_pipe(self, p: Pipe):
         """
