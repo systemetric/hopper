@@ -1,4 +1,5 @@
 pipes/
 __pycache__/
+dist/
 hopper.egg-info/
 tmplog.txt
