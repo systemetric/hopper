@@ -1,5 +1,6 @@
 from hopper.common import *
 
+
 class HopperClient:
     def __init__(self):
         """
@@ -7,11 +8,12 @@ class HopperClient:
         """
         self.__pipes = []
 
-    def open_pipe(self, pn, create = True, delete = False, blocking = False, use_read_buffer = False, read_buffer_terminator = b'\n'):
+    def open_pipe(self, pn, create=True, delete=False, blocking=False, use_read_buffer=False, read_buffer_terminator=b'\n'):
         """
         Open a pipe specified by a PipeName `pn`.
         """
-        pipe = Pipe(pn, create=create, delete=delete, blocking=blocking, use_read_buffer=use_read_buffer, read_buffer_terminator=read_buffer_terminator)
+        pipe = Pipe(pn, create=create, delete=delete, blocking=blocking,
+                    use_read_buffer=use_read_buffer, read_buffer_terminator=read_buffer_terminator)
         self.__pipes.append(pipe)
 
     def close_pipe(self, pn):
@@ -24,7 +26,7 @@ class HopperClient:
 
         p.close()
         self.__pipes.remove(p)
-    
+
     def get_pipe_by_pipe_name(self, pn):
         """
         Return the Pipe object specified by PipeName `pn`.
@@ -34,7 +36,7 @@ class HopperClient:
                 return p
         return None
 
-    def read(self, pn):
+    def read(self, pn, _buf_size=-1):
         """
         Read content from the pipe specified by `pn`.
         """
@@ -42,8 +44,8 @@ class HopperClient:
         if p == None:
             raise
 
-        return p.read()
-    
+        return p.read(_buf_size=_buf_size)
+
     def write(self, pn, buf):
         """
         Write `buf` to the PipeName specified by `pn`.
