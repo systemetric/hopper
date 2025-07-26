@@ -8,23 +8,25 @@ Pipe class:
     Implements basic read/write operations.
 """
 
+
 class Pipe:
     __BUF_SIZE = 64
     __fd = 0
     __pn = None
     __handler = None
 
-    def __init__(self, pn: PipeName, create = False, delete = False, blocking = False, use_read_buffer = False, read_buffer_terminator = b'\n'):
+    def __init__(self, pn: PipeName, create=False, delete=False, blocking=False, use_read_buffer=False, read_buffer_terminator=b'\n', buffer_size=64):
         self.__pn = pn
         self.__create = create
         self.__delete = delete
         self.__blocking = blocking
         self.__use_read_buffer = use_read_buffer
         self.__read_buffer_terminator = read_buffer_terminator
+        self.__BUF_SIZE = buffer_size
 
         # The read buffer with non-blocking I/O, blocks, but not nicely
         if not self.__blocking and self.__use_read_buffer:
-            print("WARN: Buffered reads with non-blocking I/O can crash the brain!")    
+            print("WARN: Buffered reads with non-blocking I/O can crash the brain!")
 
         self.__open()
 
@@ -41,11 +43,11 @@ class Pipe:
 
         flags = os.O_RDWR
         flags |= (0 if self.__blocking else os.O_NONBLOCK)
-        
+
         self.__fd = os.open(pipe_path, flags)
         self.__inode_number = os.stat(pipe_path).st_ino
 
-    def read(self):
+    def read(self, _buf_size=-1):
         if self.__use_read_buffer:
             buf = b''
             # Consume greedily, until we reach the terminator
@@ -60,13 +62,14 @@ class Pipe:
                 except:
                     return None
             return buf
-        
+
         try:
-            buf = os.read(self.__fd, self.__BUF_SIZE)
+            buf = os.read(
+                self.__fd, self.__BUF_SIZE if _buf_size == -1 else _buf_size)
         except:
             return None
         return buf
-    
+
     def write(self, buf):
         try:
             os.write(self.__fd, buf)
@@ -76,7 +79,7 @@ class Pipe:
     def close(self):
         if self.__pn == None:
             return
-        
+
         os.close(self.__fd)
         if self.__delete:
             os.remove(self.__pn.pipe_path)
@@ -84,53 +87,57 @@ class Pipe:
     def __del__(self):
         self.close()
 
-    @property
-    def type(self):
-        if self.__pn == None:
-            return None
-        return self.__pn.type
-    
-    @property
-    def id(self):
-        if self.__pn == None:
-            return None
-        return self.__pn.id
-    
-    @property
-    def handler_id(self):
-        if self.__pn == None:
-            return None
-        return self.__pn.handler_id
-    
-    @property
-    def pipe_name(self):
-        if self.__pn == None:
-            return None
-        return self.__pn
-    
-    @property
-    def pipe_path(self):
-        if self.__pn == None:
-            return None
-        return self.__pn.pipe_path
-
     def set_handler(self, handlers):
         if self.__pn == None:
             raise ValueError("Bad pipe name")
-        
+
         try:
             self.__handler = handlers[self.__pn.handler_id]
         except:
             raise
 
     @property
+    def type(self):
+        if self.__pn == None:
+            return None
+        return self.__pn.type
+
+    @property
+    def id(self):
+        if self.__pn == None:
+            return None
+        return self.__pn.id
+
+    @property
+    def handler_id(self):
+        if self.__pn == None:
+            return None
+        return self.__pn.handler_id
+
+    @property
+    def pipe_name(self):
+        if self.__pn == None:
+            return None
+        return self.__pn
+
+    @property
+    def pipe_path(self):
+        if self.__pn == None:
+            return None
+        return self.__pn.pipe_path
+
+    @property
     def handler(self):
         return self.__handler
-    
+
     @property
     def fd(self):
         return self.__fd
-    
+
     @property
     def inode_number(self):
         return self.__inode_number
+
+    @property
+    def blocking(self):
+        return self.__blocking
