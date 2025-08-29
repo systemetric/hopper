@@ -10,12 +10,12 @@ Pipe class:
 
 
 class Pipe:
-    __BUF_SIZE = 64
+    __BUF_SIZE = 1024
     __fd = 0
     __pn = None
     __handler = None
 
-    def __init__(self, pn: PipeName, create=False, delete=False, blocking=False, use_read_buffer=False, read_buffer_terminator=b'\n', buffer_size=64):
+    def __init__(self, pn: PipeName, create=False, delete=False, blocking=False, use_read_buffer=False, read_buffer_terminator=b'\n', buffer_size=1024):
         self.__pn = pn
         self.__create = create
         self.__delete = delete
