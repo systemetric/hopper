@@ -1,10 +1,11 @@
+#define _GNU_SOURCE
+
 #include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "handler.h"
 #include "pipe.h"
@@ -104,6 +105,7 @@ int reopen_pipe_set(struct PipeSet *set) {
                         (set->info->type == PIPE_SRC ? O_RDONLY : O_WRONLY) |
                             O_NONBLOCK)) < 0) {
         if (errno == ENXIO && set->info->type == PIPE_DST) {
+            printf("'%s' set to INACTIVE\n", set->info->name);
             set->status = PIPE_INACTIVE;
             return 1;
         }
@@ -111,6 +113,9 @@ int reopen_pipe_set(struct PipeSet *set) {
         perror("open");
         return 1;
     }
+
+    printf("'%s' set to ACTIVE\n", set->info->name);
+
     return 0;
 }
 
@@ -129,7 +134,7 @@ struct PipeSet *open_pipe_set(const char *path) {
         return NULL;
 
     set->info = info;
-    set->status = PIPE_INACTIVE;
+    set->status = PIPE_ACTIVE;
     set->next = NULL;
 
     if (pipe(set->buf) < 0) {
@@ -142,6 +147,7 @@ struct PipeSet *open_pipe_set(const char *path) {
                                   O_NONBLOCK)) < 0) {
         if (errno == ENXIO && info->type == PIPE_DST) {
             set->status = PIPE_INACTIVE;
+            printf("'%s' set to INACTIVE\n", set->info->name);
             return set;
         }
 
@@ -152,4 +158,99 @@ struct PipeSet *open_pipe_set(const char *path) {
     }
 
     return set;
+}
+
+ssize_t nb_splice(int src, int dst, ssize_t max) {
+    ssize_t bytes_copied = 0;
+
+    while ((bytes_copied = splice(src, NULL, dst, NULL, max, 0)) < 0) {
+        if (errno == EAGAIN)
+            return 0;
+        if (errno == EINTR)
+            continue;
+
+        perror("splice");
+        return -1;
+    }
+
+    return bytes_copied;
+}
+
+ssize_t nb_tee(int src, int dst, ssize_t max) {
+    ssize_t bytes_copied = 0;
+
+    while ((bytes_copied = tee(src, dst, max, 0)) < 0) {
+        if (errno == EAGAIN)
+            return 0;
+        if (errno == EINTR)
+            continue;
+
+        perror("tee");
+        return -1;
+    }
+
+    return bytes_copied;
+}
+
+ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
+                         ssize_t max) {
+    struct PipeSet *dst = NULL;
+    ssize_t bytes_copied = 0;
+    short handler_id = src->info->handler;
+
+    if ((bytes_copied = nb_splice(src->fd, src->buf[1], max)) < 0) {
+        src->status = PIPE_INACTIVE;
+        printf("'%s' set to INACTIVE\n", src->info->name);
+        return bytes_copied;
+    }
+
+    dst = data->outputs[handler_id];
+    while (dst) {
+        if (dst->status == PIPE_INACTIVE) {
+            dst = dst->next;
+            continue;
+        }
+
+        ssize_t remaining = bytes_copied, done;
+        while (remaining > 0) {
+            done = nb_tee(src->buf[0], dst->buf[1], max);
+            if (done <= 0)
+                break;
+
+            remaining -= done;
+        }
+        dst = dst->next;
+    }
+
+    dst = data->outputs[handler_id];
+    while (dst) {
+        if (dst->status == PIPE_INACTIVE) {
+            dst = dst->next;
+            continue;
+        }
+
+        ssize_t remaining = bytes_copied, done;
+        while (remaining > 0) {
+            done = nb_splice(dst->buf[0], dst->fd, max);
+            if (done <= 0) {
+                if (errno == EPIPE) {
+                    close(dst->fd);
+                    dst->fd = -1;
+                    dst->status = PIPE_INACTIVE;
+                    printf("'%s' set to INACTIVE\n", dst->info->name);
+                }
+                break;
+            }
+
+            remaining -= done;
+        }
+        dst = dst->next;
+    }
+
+    splice(src->buf[0], NULL, data->devnull, NULL, max, 0);
+
+    printf("%d/%s copied %zd bytes\n", src->info->handler, src->info->id,
+           bytes_copied);
+
+    return bytes_copied;
 }

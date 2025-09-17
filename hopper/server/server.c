@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <libgen.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,17 +13,9 @@
 
 #include "handler.h"
 #include "pipe.h"
+#include "server.h"
 
-#define MAX_PIPES 256
-
-struct HopperData {
-    struct PipeSet *pipes;
-    struct PipeSet **outputs;
-    int n_pipes;
-    int epoll_fd;
-    int inotify_fd;
-    const char *pipe_dir;
-};
+#define MAX_COPY_SIZE 64 * 1024
 
 void free_pipe_list(struct PipeSet *head) {
     struct PipeSet *set;
@@ -46,8 +39,7 @@ void free_hopper_data(struct HopperData *data) {
     free_pipe_list(data->pipes);
 
     if (data->outputs)
-        for (int i = 0; i < N_HANDLERS; i++)
-            free_pipe_list(data->outputs[i]);
+        free(data->outputs);
 }
 
 void close_hopper_fds(struct HopperData *data) {
@@ -56,6 +48,7 @@ void close_hopper_fds(struct HopperData *data) {
 
     close(data->epoll_fd);
     close(data->inotify_fd);
+    close(data->devnull);
 
     struct PipeSet *set = data->pipes;
 
@@ -75,16 +68,37 @@ struct HopperData *alloc_hopper_data() {
         goto err_malloc;
 
     data->outputs =
-        (struct PipeSet **)malloc(sizeof(struct PipeSet *) * N_HANDLERS);
+        (struct PipeSet **)calloc(N_HANDLERS, sizeof(struct PipeSet *));
     if (!data->outputs)
         goto err_malloc;
 
     return data;
 
 err_malloc:
-    perror("malloc");
+    perror("alloc");
     free_hopper_data(data);
     return NULL;
+}
+
+int load_new_pipe(struct HopperData *data, struct PipeSet *set) {
+    prepend_pipe_list(&data->pipes, set);
+
+    if (set->info->type == PIPE_DST)
+        prepend_pipe_list(&data->outputs[set->info->handler], set);
+    else if (set->info->type == PIPE_SRC) {
+        struct epoll_event ev = {};
+        ev.events = EPOLLIN | EPOLLHUP;
+        ev.data.ptr = (void *)set;
+
+        int res;
+        if ((res = epoll_ctl(data->epoll_fd, EPOLL_CTL_ADD, set->fd, &ev)) !=
+            0) {
+            perror("epoll_ctl ADD");
+            return res;
+        }
+    }
+
+    return 0;
 }
 
 int load_pipes_directory(struct HopperData *data) {
@@ -108,7 +122,8 @@ int load_pipes_directory(struct HopperData *data) {
         if (!set)
             continue;
 
-        prepend_pipe_list(&data->pipes, set);
+        if (load_new_pipe(data, set) < 0)
+            continue;
 
         printf("added fifo '%s'\n", path);
     }
@@ -116,6 +131,34 @@ int load_pipes_directory(struct HopperData *data) {
     closedir(dir);
 
     return 0;
+}
+
+int run_epoll_cycle(struct HopperData *data) {
+    struct epoll_event events[MAX_EVENTS];
+    int res;
+
+    int n = epoll_wait(data->epoll_fd, events, MAX_EVENTS, -1);
+    if (n < 0) {
+        perror("epoll_wait");
+        return n;
+    }
+
+    for (int i = 0; i < n; i++) {
+        struct PipeSet *set = (struct PipeSet *)events[i].data.ptr;
+
+        if (events[i].events & EPOLLIN)
+            if ((res = transfer_buffers(data, set, MAX_COPY_SIZE)) < 0)
+                return res;
+
+        if (events[i].events & EPOLLHUP) {
+            close(set->fd);
+            set->fd = -1;
+            set->status = PIPE_INACTIVE;
+            printf("'%s' set to INACTIVE\n", set->info->name);
+        }
+    }
+
+    return n;
 }
 
 int main(int argc, char *argv[]) {
@@ -126,6 +169,8 @@ int main(int argc, char *argv[]) {
 
     int ret = 0;
 
+    signal(SIGPIPE, SIG_IGN);
+
     struct HopperData *data = alloc_hopper_data();
     if (!data) {
         ret = 1;
@@ -133,6 +178,12 @@ int main(int argc, char *argv[]) {
     }
 
     data->pipe_dir = argv[1];
+
+    if ((data->devnull = open("/dev/null", O_WRONLY)) < 0) {
+        perror("open");
+        ret = 1;
+        goto cleanup;
+    }
 
     if ((data->epoll_fd = epoll_create1(0)) < 0) {
         perror("epoll_create");
@@ -143,6 +194,9 @@ int main(int argc, char *argv[]) {
     if (load_pipes_directory(data) != 0) {
         ret = 1;
         goto cleanup;
+    }
+
+    while (run_epoll_cycle(data)) {
     }
 
 cleanup:
