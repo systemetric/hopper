@@ -2,6 +2,7 @@
 
 #include <fcntl.h>
 #include <libgen.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,13 +28,37 @@ struct PipeInfo {
 struct PipeSet {
     int buf[2];
     int fd;
+    pthread_t thread;
     struct PipeInfo *info;
+};
+
+/// A structure to hold all server variables
+struct HopperData {
+    struct PipeSet *pipes[MAX_PIPES];
+    int n_pipes;
+    int devnull;
+};
+
+/// A structure for holding all thread-specific data
+struct ThreadData {
+    struct HopperData *data;
+    struct PipeSet *set;
 };
 
 /// Maps a handler string to an ID number
 short map_handler_to_id(char *handler) { return HANDLER_UNKNOWN; }
 
+/// Join all threads associated with a pipe set
+void join_pipe_set(struct PipeSet *set) {
+    if (set->thread > 0) {
+        void *res;
+        pthread_join(set->thread, &res);
+        set->thread = 0;
+    }
+}
+
 /// Close all file descriptors in a PipeSet object
+/// Threads should be joined first
 void close_pipe_set(struct PipeSet *set) {
     close(set->buf[0]);
     close(set->buf[1]);
@@ -127,6 +152,7 @@ struct PipeSet *open_pipe_set(const char *path) {
         return NULL;
 
     set->info = info;
+    set->thread = 0;
 
     if (pipe(set->buf) < 0) {
         free_pipe_set(&set);
@@ -153,57 +179,117 @@ struct PipeSet *open_pipe_set(const char *path) {
     return set;
 }
 
+static void *input_thread_start(void *arg) {
+    struct ThreadData *data = (struct ThreadData *)arg;
+    printf("Made new thread for pipe %s\n", data->set->info->id);
+
+    struct PipeSet *outputs[MAX_PIPES];
+    int n_outputs = 0;
+
+    for (int i = 0; i < data->data->n_pipes && i < MAX_PIPES; i++) {
+        struct PipeSet *output = data->data->pipes[i];
+
+        if (output->info->type != PIPE_DST)
+            continue;
+
+        if (output->info->handler != data->set->info->handler)
+            continue;
+
+        // Ensure the IDs are different to avoid echoing
+        if (!strcmp(output->info->id, data->set->info->id))
+            continue;
+
+        outputs[n_outputs] = output;
+        n_outputs++;
+    }
+
+    ssize_t bytes_read = 0;
+
+    while ((bytes_read = splice(data->set->fd, NULL, data->set->buf[1], NULL,
+                                MAX_COPY_SIZE, 0)) > 0) {
+        for (int i = 0; i < n_outputs; i++) {
+            tee(data->set->buf[0], outputs[i]->buf[1], bytes_read, 0);
+        }
+
+        for (int i = 0; i < n_outputs; i++) {
+            splice(outputs[i]->buf[0], NULL, outputs[i]->fd, NULL, bytes_read,
+                   0);
+        }
+
+        splice(data->set->buf[0], NULL, data->data->devnull, NULL, bytes_read,
+               0);
+
+        printf("%d/%s: copied %zd bytes\n", data->set->info->handler,
+               data->set->info->id, bytes_read);
+    }
+
+    return NULL;
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         printf("Usage: %s <pipe> ...\n", argv[0]);
         return 1;
     }
 
-    struct PipeSet *pipes[MAX_PIPES];
-    int n_pipes = 0;
+    struct HopperData data = {0};
 
     for (int i = 1; i < argc && i < MAX_PIPES; i++) {
         struct PipeSet *set = open_pipe_set(argv[i]);
         if (!set)
-            goto close_pipes;
+            goto cleanup_pipes;
 
-        pipes[i - 1] = set;
+        data.pipes[i - 1] = set;
 
-        printf("%d:\n", i);
+        printf("%d:\n", i - 1);
         printf("\tType: %d\n", set->info->type);
         printf("\tHandler: %d\n", set->info->handler);
         printf("\tID: %s\n", set->info->id);
 
-        n_pipes++;
+        data.n_pipes++;
     }
 
-    /*
-    int devnull = open("/dev/null", O_WRONLY);
-
-    ssize_t bytes_copied = 0;
-
-    while ((bytes_copied = splice(src->fd, NULL, src->buf[1], NULL,
-                                  MAX_COPY_SIZE, 0)) > 0) {
-        tee(src->buf[0], dst->buf[1], MAX_COPY_SIZE, 0);
-        splice(dst->buf[0], NULL, dst->fd, NULL, MAX_COPY_SIZE, 0);
-
-        splice(src->buf[0], NULL, devnull, NULL, MAX_COPY_SIZE, 0);
-
-        printf("Copied %zd bytes\n", bytes_copied);
+    data.devnull = open("/dev/null", O_WRONLY);
+    if (!data.devnull) {
+        perror("open");
+        goto cleanup_pipes;
     }
 
+    for (int i = 0; i < data.n_pipes; i++) {
+        if (data.pipes[i]->info->type == PIPE_SRC) {
+            struct ThreadData *tdata =
+                (struct ThreadData *)malloc(sizeof(struct ThreadData));
+            if (!tdata) {
+                perror("malloc");
+                goto cleanup_pipes;
+            }
 
-    close (devnull);
-    */
+            tdata->data = &data;
+            tdata->set = data.pipes[i];
 
-close_pipes:
-
-    for (int i = 0; i < n_pipes && i < MAX_PIPES; i++) {
-        if (pipes[i]) {
-            close_pipe_set(pipes[i]);
-            free_pipe_set(&pipes[i]);
+            if (pthread_create(&tdata->set->thread, NULL, &input_thread_start,
+                               tdata) != 0) {
+                perror("pthread_create");
+                goto cleanup_pipes;
+            }
         }
     }
+
+    while (1) {
+        sleep(1);
+    }
+
+cleanup_pipes:
+
+    for (int i = 0; i < data.n_pipes && i < MAX_PIPES; i++) {
+        if (data.pipes[i]) {
+            join_pipe_set(data.pipes[i]);
+            close_pipe_set(data.pipes[i]);
+            free_pipe_set(&data.pipes[i]);
+        }
+    }
+
+    close(data.devnull);
 
     return 0;
 }
