@@ -65,16 +65,16 @@ struct HopperData *alloc_hopper_data() {
     struct HopperData *data =
         (struct HopperData *)malloc(sizeof(struct HopperData));
     if (!data)
-        goto err_malloc;
+        goto err_alloc;
 
     data->outputs =
         (struct PipeSet **)calloc(N_HANDLERS, sizeof(struct PipeSet *));
     if (!data->outputs)
-        goto err_malloc;
+        goto err_alloc;
 
     return data;
 
-err_malloc:
+err_alloc:
     perror("alloc");
     free_hopper_data(data);
     return NULL;
