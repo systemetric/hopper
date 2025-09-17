@@ -16,6 +16,19 @@
 #define PIPE_DST 2
 
 #define HANDLER_UNKNOWN 0
+#define HANDLER_GENERIC {1, "generic"}
+#define HANDLER_LOG {2, "log"}
+
+#ifdef UNUSED_HANDLERS
+
+#define HANDLER_FULL_LOG {3, "fulllog"}
+#define HANDLER_COMPLETE_LOG {4, "complog"}
+
+#endif
+
+#define HANDLER_START_BUTTON {5, "start-button"}
+#define HANDLER_STARTER {6, "starter"}
+#define HANDLER_HARDWARE {7, "hardware"}
 
 /// A structure for holding pipe information
 struct PipeInfo {
@@ -45,8 +58,33 @@ struct ThreadData {
     struct PipeSet *set;
 };
 
+/// A mapping between a handler ID and name
+struct HandlerMap {
+    short handler;
+    char *name;
+};
+
+/// An array of handler mappings
+static struct HandlerMap HANDLER_MAP[] = {
+    HANDLER_GENERIC,      HANDLER_LOG,
+
+#ifdef UNUSED_HANDLERS
+    HANDLER_FULL_LOG,     HANDLER_COMPLETE_LOG,
+#endif
+
+    HANDLER_START_BUTTON, HANDLER_STARTER,      HANDLER_HARDWARE,
+};
+
 /// Maps a handler string to an ID number
-short map_handler_to_id(char *handler) { return HANDLER_UNKNOWN; }
+short map_handler_to_id(char *handler) {
+    int n_handlers = sizeof(HANDLER_MAP) / sizeof(struct HandlerMap);
+
+    for (int i = 0; i < n_handlers; i++)
+        if (!strcmp(handler, HANDLER_MAP[i].name))
+            return HANDLER_MAP[i].handler;
+
+    return HANDLER_UNKNOWN;
+}
 
 /// Join all threads associated with a pipe set
 void join_pipe_set(struct PipeSet *set) {
