@@ -41,7 +41,7 @@ struct HopperData {
 
 /// A structure for holding all thread-specific data
 struct ThreadData {
-    struct HopperData *data;
+    struct HopperData *global;
     struct PipeSet *set;
 };
 
@@ -179,15 +179,17 @@ struct PipeSet *open_pipe_set(const char *path) {
     return set;
 }
 
+/// Thread function to copy data from source to destination FIFOs
 static void *input_thread_start(void *arg) {
     struct ThreadData *data = (struct ThreadData *)arg;
-    printf("Made new thread for pipe %s\n", data->set->info->id);
+    printf("Created new thread for pipe %d/%s\n", data->set->info->handler,
+           data->set->info->id);
 
     struct PipeSet *outputs[MAX_PIPES];
     int n_outputs = 0;
 
-    for (int i = 0; i < data->data->n_pipes && i < MAX_PIPES; i++) {
-        struct PipeSet *output = data->data->pipes[i];
+    for (int i = 0; i < data->global->n_pipes && i < MAX_PIPES; i++) {
+        struct PipeSet *output = data->global->pipes[i];
 
         if (output->info->type != PIPE_DST)
             continue;
@@ -208,22 +210,60 @@ static void *input_thread_start(void *arg) {
     while ((bytes_read = splice(data->set->fd, NULL, data->set->buf[1], NULL,
                                 MAX_COPY_SIZE, 0)) > 0) {
         for (int i = 0; i < n_outputs; i++) {
-            tee(data->set->buf[0], outputs[i]->buf[1], bytes_read, 0);
+            ssize_t remaining = bytes_read, done;
+            while (remaining > 0) {
+                done =
+                    tee(data->set->buf[0], outputs[i]->buf[1], bytes_read, 0);
+                if (done <= 0)
+                    break;
+
+                remaining -= done;
+            }
         }
 
         for (int i = 0; i < n_outputs; i++) {
-            splice(outputs[i]->buf[0], NULL, outputs[i]->fd, NULL, bytes_read,
-                   0);
+            ssize_t remaining = bytes_read, done;
+            while (remaining > 0) {
+                done = splice(outputs[i]->buf[0], NULL, outputs[i]->fd, NULL,
+                              bytes_read, 0);
+                if (done <= 0)
+                    break;
+
+                remaining -= done;
+            }
         }
 
-        splice(data->set->buf[0], NULL, data->data->devnull, NULL, bytes_read,
+        splice(data->set->buf[0], NULL, data->global->devnull, NULL, bytes_read,
                0);
 
         printf("%d/%s: copied %zd bytes\n", data->set->info->handler,
                data->set->info->id, bytes_read);
     }
 
+    // Passed arguments are owned by this thread, and not freed anywhere else
+    free(arg);
+
     return NULL;
+}
+
+int spawn_pipe_thread(struct PipeSet *set, struct HopperData *data) {
+    struct ThreadData *tdata =
+        (struct ThreadData *)malloc(sizeof(struct ThreadData));
+    if (!tdata) {
+        perror("malloc");
+        return 1;
+    }
+
+    tdata->global = data;
+    tdata->set = set;
+
+    if (pthread_create(&tdata->set->thread, NULL, &input_thread_start, tdata) !=
+        0) {
+        perror("pthread_create");
+        return 1;
+    }
+
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -255,25 +295,10 @@ int main(int argc, char *argv[]) {
         goto cleanup_pipes;
     }
 
-    for (int i = 0; i < data.n_pipes; i++) {
-        if (data.pipes[i]->info->type == PIPE_SRC) {
-            struct ThreadData *tdata =
-                (struct ThreadData *)malloc(sizeof(struct ThreadData));
-            if (!tdata) {
-                perror("malloc");
+    for (int i = 0; i < data.n_pipes; i++)
+        if (data.pipes[i]->info->type == PIPE_SRC)
+            if (!spawn_pipe_thread(data.pipes[i], &data))
                 goto cleanup_pipes;
-            }
-
-            tdata->data = &data;
-            tdata->set = data.pipes[i];
-
-            if (pthread_create(&tdata->set->thread, NULL, &input_thread_start,
-                               tdata) != 0) {
-                perror("pthread_create");
-                goto cleanup_pipes;
-            }
-        }
-    }
 
     while (1) {
         sleep(1);
