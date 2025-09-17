@@ -134,41 +134,50 @@ struct PipeSet *open_pipe_set(const char *path) {
         return NULL;
     }
 
-    if ((set->fd = open(path, (info->type == PIPE_SRC ? O_RDONLY : O_WRONLY))) <
-        0) {
+    // Use O_RDWR here to avoid failing to open write FIFOs if no process is
+    // reading, don't use O_WRONLY
+    if ((set->fd = open(path, (info->type == PIPE_SRC ? O_RDONLY : O_RDWR) |
+                                  O_NONBLOCK)) < 0) {
         close_pipe_set(set);
         free_pipe_set(&set);
         perror("open");
         return NULL;
     }
 
+    // Remove the non-blocking flag, as this server requires blocking I/O
+    int flags = fcntl(set->fd, F_GETFL);
+    if (flags >= 0) {
+        fcntl(set->fd, F_SETFL, flags & ~O_NONBLOCK);
+    }
+
     return set;
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        printf("Usage: %s <source> <destination>\n", argv[0]);
+    if (argc < 2) {
+        printf("Usage: %s <pipe> ...\n", argv[0]);
         return 1;
     }
 
-    struct PipeSet *src = open_pipe_set(argv[1]);
-    if (!src)
-        return 1;
+    struct PipeSet *pipes[MAX_PIPES];
+    int n_pipes = 0;
 
-    struct PipeSet *dst = open_pipe_set(argv[2]);
-    if (!dst)
-        return 1;
+    for (int i = 1; i < argc && i < MAX_PIPES; i++) {
+        struct PipeSet *set = open_pipe_set(argv[i]);
+        if (!set)
+            goto close_pipes;
 
-    printf("Source:\n");
-    printf("\tType: %d\n", src->info->type);
-    printf("\tHandler: %d\n", src->info->handler);
-    printf("\tID: %s\n", src->info->id);
+        pipes[i - 1] = set;
 
-    printf("Destination:\n");
-    printf("\tType: %d\n", dst->info->type);
-    printf("\tHandler: %d\n", dst->info->handler);
-    printf("\tID: %s\n", dst->info->id);
+        printf("%d:\n", i);
+        printf("\tType: %d\n", set->info->type);
+        printf("\tHandler: %d\n", set->info->handler);
+        printf("\tID: %s\n", set->info->id);
 
+        n_pipes++;
+    }
+
+    /*
     int devnull = open("/dev/null", O_WRONLY);
 
     ssize_t bytes_copied = 0;
@@ -183,12 +192,18 @@ int main(int argc, char *argv[]) {
         printf("Copied %zd bytes\n", bytes_copied);
     }
 
-    close(devnull);
-    close_pipe_set(src);
-    close_pipe_set(dst);
 
-    free_pipe_set(&src);
-    free_pipe_set(&dst);
+    close (devnull);
+    */
+
+close_pipes:
+
+    for (int i = 0; i < n_pipes && i < MAX_PIPES; i++) {
+        if (pipes[i]) {
+            close_pipe_set(pipes[i]);
+            free_pipe_set(&pipes[i]);
+        }
+    }
 
     return 0;
 }
