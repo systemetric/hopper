@@ -25,10 +25,11 @@ struct HopperData {
 };
 
 void free_pipe_list(struct PipeSet *head) {
-    if (head) {
-        free_pipe_list(head->next);
-        head->next = NULL;
+    struct PipeSet *set;
+    while (head) {
+        set = head->next;
         free(head);
+        head = set;
     }
 }
 
@@ -47,6 +48,23 @@ void free_hopper_data(struct HopperData *data) {
     if (data->outputs)
         for (int i = 0; i < N_HANDLERS; i++)
             free_pipe_list(data->outputs[i]);
+}
+
+void close_hopper_fds(struct HopperData *data) {
+    if (!data)
+        return;
+
+    close(data->epoll_fd);
+    close(data->inotify_fd);
+
+    struct PipeSet *set = data->pipes;
+
+    do {
+        close(set->fd);
+        close(set->buf[0]);
+        close(set->buf[1]);
+        set = set->next;
+    } while (set);
 }
 
 /// Allocate a new HopperData structure
@@ -128,6 +146,7 @@ int main(int argc, char *argv[]) {
     }
 
 cleanup:
+    close_hopper_fds(data);
     free_hopper_data(data);
     return ret;
 }
