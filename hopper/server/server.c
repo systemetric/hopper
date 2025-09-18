@@ -80,25 +80,49 @@ err_alloc:
     return NULL;
 }
 
-int load_new_pipe(struct HopperData *data, struct PipeSet *set) {
+int epoll_add_src_pipe(struct HopperData *data, struct PipeSet *set) {
+    struct epoll_event ev = {};
+    ev.events = EPOLLIN | EPOLLHUP;
+    ev.data.ptr = (void *)set;
+
+    int res;
+    if ((res = epoll_ctl(data->epoll_fd, EPOLL_CTL_ADD, set->fd, &ev)) != 0)
+        perror("epoll_ctl ADD");
+
+    return res;
+}
+
+int load_new_pipe(struct HopperData *data, const char *path) {
+    struct PipeSet *set = open_pipe_set(path);
+    if (!set)
+        return 1;
+
     prepend_pipe_list(&data->pipes, set);
 
     if (set->info->type == PIPE_DST)
         prepend_pipe_list(&data->outputs[set->info->handler], set);
-    else if (set->info->type == PIPE_SRC) {
-        struct epoll_event ev = {};
-        ev.events = EPOLLIN | EPOLLHUP;
-        ev.data.ptr = (void *)set;
 
-        int res;
-        if ((res = epoll_ctl(data->epoll_fd, EPOLL_CTL_ADD, set->fd, &ev)) !=
-            0) {
-            perror("epoll_ctl ADD");
-            return res;
-        }
-    }
+    printf("added fifo '%s'\n", path);
 
     return 0;
+}
+
+void pipe_set_status_inactive(struct PipeSet *set, struct HopperData *data) {
+    if (set->info->type == PIPE_SRC)
+        if (epoll_ctl(data->epoll_fd, EPOLL_CTL_DEL, set->fd, NULL) != 0)
+            perror("epoll_ctl DEL");
+
+    close(set->fd);
+    set->fd = -1;
+    set->status = PIPE_INACTIVE;
+    printf("%d/%s set to INACTIVE\n", set->info->handler, set->info->id);
+}
+
+void pipe_set_status_active(struct PipeSet *set, struct HopperData *data) {
+    if (set->info->type == PIPE_SRC)
+        epoll_add_src_pipe(data, set);
+
+    printf("%d/%s set to ACTIVE\n", set->info->handler, set->info->id);
 }
 
 int load_pipes_directory(struct HopperData *data) {
@@ -118,14 +142,8 @@ int load_pipes_directory(struct HopperData *data) {
         char path[PATH_MAX];
         snprintf(path, sizeof(path), "%s/%s", data->pipe_dir, entry->d_name);
 
-        struct PipeSet *set = open_pipe_set(path);
-        if (!set)
+        if (load_new_pipe(data, path) < 0)
             continue;
-
-        if (load_new_pipe(data, set) < 0)
-            continue;
-
-        printf("added fifo '%s'\n", path);
     }
 
     closedir(dir);
@@ -150,12 +168,8 @@ int run_epoll_cycle(struct HopperData *data) {
             if ((res = transfer_buffers(data, set, MAX_COPY_SIZE)) < 0)
                 return res;
 
-        if (events[i].events & EPOLLHUP) {
-            close(set->fd);
-            set->fd = -1;
-            set->status = PIPE_INACTIVE;
-            printf("'%s' set to INACTIVE\n", set->info->name);
-        }
+        if (events[i].events & EPOLLHUP)
+            pipe_set_status_inactive(set, data);
     }
 
     return n;
@@ -196,7 +210,9 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    while (run_epoll_cycle(data)) {
+    int res = 0;
+    while (res >= 0) {
+        res = run_epoll_cycle(data);
     }
 
 cleanup:

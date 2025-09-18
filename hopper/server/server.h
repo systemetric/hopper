@@ -13,4 +13,7 @@ struct HopperData {
     const char *pipe_dir;
 };
 
+void pipe_set_status_inactive(struct PipeSet *set, struct HopperData *data);
+void pipe_set_status_active(struct PipeSet *set, struct HopperData *data);
+
 #endif // server_h_INCLUDED

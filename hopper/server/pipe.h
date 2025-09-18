@@ -33,7 +33,7 @@ void close_pipe_set(struct PipeSet *set);
 void free_pipe_set(struct PipeSet **set);
 struct PipeInfo *get_pipe_info(const char *path);
 struct PipeSet *open_pipe_set(const char *path);
-int reopen_pipe_set(struct PipeSet *set);
+int reopen_pipe_set(struct PipeSet *set, struct HopperData *data);
 ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
                          ssize_t max);
 #endif // pipe_h_INCLUDED

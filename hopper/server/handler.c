@@ -1,4 +1,4 @@
-
+#include <stdio.h>
 #include <string.h>
 
 #include "handler.h"
@@ -29,6 +29,8 @@ short map_handler_to_id(char *handler) {
     for (int i = 0; i < n_handlers; i++)
         if (!strcmp(handler, HANDLER_MAP[i].name))
             return HANDLER_MAP[i].handler;
+
+    printf("pipe handler '%s' is not recognised\n", handler);
 
     return HANDLER_UNKNOWN;
 }

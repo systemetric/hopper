@@ -95,7 +95,7 @@ err_bad_fname:
 }
 
 /// Try to reopen a previously closed pipe
-int reopen_pipe_set(struct PipeSet *set) {
+int reopen_pipe_set(struct PipeSet *set, struct HopperData *data) {
     if (set->status == PIPE_ACTIVE)
         return 0;
 
@@ -105,8 +105,7 @@ int reopen_pipe_set(struct PipeSet *set) {
                         (set->info->type == PIPE_SRC ? O_RDONLY : O_WRONLY) |
                             O_NONBLOCK)) < 0) {
         if (errno == ENXIO && set->info->type == PIPE_DST) {
-            printf("'%s' set to INACTIVE\n", set->info->name);
-            set->status = PIPE_INACTIVE;
+            pipe_set_status_inactive(set, data);
             return 1;
         }
 
@@ -114,7 +113,7 @@ int reopen_pipe_set(struct PipeSet *set) {
         return 1;
     }
 
-    printf("'%s' set to ACTIVE\n", set->info->name);
+    pipe_set_status_active(set, data);
 
     return 0;
 }
@@ -134,26 +133,13 @@ struct PipeSet *open_pipe_set(const char *path) {
         return NULL;
 
     set->info = info;
-    set->status = PIPE_ACTIVE;
+    set->status = PIPE_INACTIVE;
     set->next = NULL;
+    set->fd = -1;
 
     if (pipe(set->buf) < 0) {
         free_pipe_set(&set);
         perror("pipe");
-        return NULL;
-    }
-
-    if ((set->fd = open(path, (info->type == PIPE_SRC ? O_RDONLY : O_WRONLY) |
-                                  O_NONBLOCK)) < 0) {
-        if (errno == ENXIO && info->type == PIPE_DST) {
-            set->status = PIPE_INACTIVE;
-            printf("'%s' set to INACTIVE\n", set->info->name);
-            return set;
-        }
-
-        close_pipe_set(set);
-        free_pipe_set(&set);
-        perror("open");
         return NULL;
     }
 
@@ -199,8 +185,7 @@ ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
     short handler_id = src->info->handler;
 
     if ((bytes_copied = nb_splice(src->fd, src->buf[1], max)) < 0) {
-        src->status = PIPE_INACTIVE;
-        printf("'%s' set to INACTIVE\n", src->info->name);
+        pipe_set_status_inactive(src, data);
         return bytes_copied;
     }
 
@@ -233,12 +218,8 @@ ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
         while (remaining > 0) {
             done = nb_splice(dst->buf[0], dst->fd, max);
             if (done <= 0) {
-                if (errno == EPIPE) {
-                    close(dst->fd);
-                    dst->fd = -1;
-                    dst->status = PIPE_INACTIVE;
-                    printf("'%s' set to INACTIVE\n", dst->info->name);
-                }
+                if (errno == EPIPE)
+                    pipe_set_status_inactive(dst, data);
                 break;
             }
 
