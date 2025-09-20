@@ -229,7 +229,7 @@ int run_epoll_cycle(struct HopperData *data) {
     }
 
     for (int i = 0; i < n; i++) {
-        if (events[i].data.u32 == INOTIFY_DATA) {
+        if (events[i].data.u64 == INOTIFY_DATA) {
             handle_inotify_event(data);
             continue;
         }
@@ -285,7 +285,10 @@ int main(int argc, char *argv[]) {
 
     struct epoll_event ev = {};
     ev.events = EPOLLIN;
-    ev.data.u32 = INOTIFY_DATA;
+    ev.data.u64 =
+        INOTIFY_DATA; // Ensure u64 is used here, not u32, which could be shared
+                      // with a pointer due to size differences. e.g. ptr could
+                      // be 0x7fffffff{INOTIFY_DATA}, using u64 prevents this!!
 
     epoll_ctl(data->epoll_fd, EPOLL_CTL_ADD, data->inotify_fd, &ev);
 
