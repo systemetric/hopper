@@ -255,6 +255,8 @@ int main(int argc, char *argv[]) {
 
     int ret = 0;
 
+    // Writing to a closed FIFO gives us a SIGPIPE, this is internally handled
+    // so ignore it.
     signal(SIGPIPE, SIG_IGN);
 
     struct HopperData *data = alloc_hopper_data();
@@ -290,7 +292,11 @@ int main(int argc, char *argv[]) {
                       // with a pointer due to size differences. e.g. ptr could
                       // be 0x7fffffff{INOTIFY_DATA}, using u64 prevents this!!
 
-    epoll_ctl(data->epoll_fd, EPOLL_CTL_ADD, data->inotify_fd, &ev);
+    if (epoll_ctl(data->epoll_fd, EPOLL_CTL_ADD, data->inotify_fd, &ev) != 0) {
+        perror("epoll_ctl ADD");
+        ret = 1;
+        goto cleanup;
+    }
 
     if ((data->inotify_root_watch_fd =
              inotify_add_watch(data->inotify_fd, data->pipe_dir,
