@@ -9,6 +9,7 @@ struct HopperData {
     int n_pipes;
     int epoll_fd;
     int inotify_fd;
+    int inotify_root_watch_fd;
     int devnull;
     const char *pipe_dir;
 };

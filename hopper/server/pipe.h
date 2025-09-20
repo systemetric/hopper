@@ -24,6 +24,7 @@ struct PipeInfo {
 struct PipeSet {
     int buf[2];
     int fd;
+    int inotify_fd;
     short status;
     struct PipeInfo *info;
     struct PipeSet *next;

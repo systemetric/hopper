@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -109,6 +110,7 @@ int reopen_pipe_set(struct PipeSet *set, struct HopperData *data) {
             return 1;
         }
 
+        pipe_set_status_inactive(set, data);
         perror("open");
         return 1;
     }
