@@ -5,7 +5,7 @@ set -e
 echo "[*] Building Hopper server..."
 
 mkdir -p build/
-gcc -o build/hopper.server hopper/server/server.c hopper/server/pipe.c hopper/server/handler.c -Ihopper/server -lpthread -Wall -Wextra -g
+gcc -o build/hopper.server hopper/server/server.c hopper/server/pipe.c hopper/server/handler.c -Ihopper/server -Wall -Wextra -g
 
 echo "[*] Installing Hopper server..."
 

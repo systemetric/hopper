@@ -3,15 +3,12 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/inotify.h>
-#include <unistd.h>
 
 #include "handler.h"
 #include "pipe.h"
