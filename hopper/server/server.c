@@ -146,27 +146,29 @@ void pipe_set_status_active(struct PipeSet *set, struct HopperData *data) {
 }
 
 int load_pipes_directory(struct HopperData *data) {
-    DIR *dir;
-    struct dirent *entry;
+    struct dirent **entries;
+    int n;
 
-    dir = opendir(data->pipe_dir);
-    if (!dir) {
-        perror("opendir");
+    if ((n = scandir(data->pipe_dir, &entries, NULL, alphasort)) < 0) {
+        perror("scandir");
         return 1;
     }
 
-    while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_type != DT_FIFO && entry->d_type != DT_UNKNOWN)
-            continue;
+    for (int i = 0; i < n; i++) {
+        struct dirent *entry = entries[i];
 
-        char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%s/%s", data->pipe_dir, entry->d_name);
+        if (entry->d_type == DT_FIFO || entry->d_type == DT_UNKNOWN) {
 
-        if (load_new_pipe(data, path) < 0)
-            continue;
+            char path[PATH_MAX];
+            snprintf(path, sizeof(path), "%s/%s", data->pipe_dir,
+                     entry->d_name);
+
+            load_new_pipe(data, path);
+        }
+        free(entry);
     }
 
-    closedir(dir);
+    free(entries);
 
     return 0;
 }
