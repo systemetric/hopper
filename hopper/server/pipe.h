@@ -38,4 +38,6 @@ struct PipeSet *open_pipe_set(const char *path);
 int reopen_pipe_set(struct PipeSet *set, struct HopperData *data);
 ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
                          ssize_t max);
+int purge_pipe_set_buffers(struct PipeSet *set, struct HopperData *data);
+
 #endif // pipe_h_INCLUDED

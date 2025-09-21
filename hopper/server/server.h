@@ -2,6 +2,7 @@
 #define server_h_INCLUDED
 
 #define MAX_EVENTS 64
+#define MAX_COPY_SIZE 1024 * 1024
 
 struct HopperData {
     struct PipeSet *pipes;

@@ -17,8 +17,6 @@
 #include "pipe.h"
 #include "server.h"
 
-#define MAX_COPY_SIZE 1024 * 1024
-
 // Data value used for inotify in epoll. PipeSet FDs use their pointers, so set
 // this to a value that would never be a valid pointer. NULL is used for other
 // things, 0x1 is low and probably won't be used by a PipeSet pointer.
@@ -125,6 +123,8 @@ void pipe_set_status_inactive(struct PipeSet *set, struct HopperData *data) {
     if (set->info->type == PIPE_SRC)
         if (epoll_ctl(data->epoll_fd, EPOLL_CTL_DEL, set->fd, NULL) != 0)
             perror("epoll_ctl DEL");
+
+    purge_pipe_set_buffers(set, data);
 
     close(set->fd);
     set->fd = -1;
