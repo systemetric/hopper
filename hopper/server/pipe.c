@@ -95,6 +95,7 @@ err_bad_fname:
     return NULL;
 }
 
+
 /// Try to reopen a previously closed pipe
 int reopen_pipe_set(struct PipeSet *set, struct HopperData *data) {
     if (set->status == PIPE_ACTIVE)
@@ -155,6 +156,8 @@ ssize_t nb_splice(int src, int dst, ssize_t max) {
             return 0;
         if (errno == EINTR)
             continue;
+        if (errno == EPIPE)
+            return -1;
 
         perror("splice");
         return -1;
@@ -193,25 +196,20 @@ ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
     dst = data->outputs[handler_id];
     while (dst) {
         if (dst->status == PIPE_INACTIVE) {
-            dst = dst->next;
+            dst = dst->next_output;
             continue;
         }
 
-        ssize_t remaining = bytes_copied, done;
-        while (remaining > 0) {
-            done = nb_tee(src->buf[0], dst->buf[1], max);
-            if (done <= 0)
-                break;
+        if (nb_tee(src->buf[0], dst->buf[1], max) < 0)
+            break;
 
-            remaining -= done;
-        }
         dst = dst->next_output;
     }
 
     dst = data->outputs[handler_id];
     while (dst) {
         if (dst->status == PIPE_INACTIVE) {
-            dst = dst->next;
+            dst = dst->next_output;
             continue;
         }
 
