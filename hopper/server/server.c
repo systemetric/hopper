@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <pthread.h>
@@ -16,7 +17,7 @@
 #include "pipe.h"
 #include "server.h"
 
-#define MAX_COPY_SIZE 64 * 1024
+#define MAX_COPY_SIZE 1024 * 1024
 
 // Data value used for inotify in epoll. PipeSet FDs use their pointers, so set
 // this to a value that would never be a valid pointer. NULL is used for other
@@ -88,7 +89,7 @@ err_alloc:
 
 int epoll_add_src_pipe(struct HopperData *data, struct PipeSet *set) {
     struct epoll_event ev = {};
-    ev.events = EPOLLIN | EPOLLHUP;
+    ev.events = EPOLLIN | EPOLLET;
     ev.data.ptr = (void *)set;
 
     int res;
@@ -105,8 +106,10 @@ int load_new_pipe(struct HopperData *data, const char *path) {
 
     prepend_pipe_list(&data->pipes, set);
 
-    if (set->info->type == PIPE_DST)
-        prepend_pipe_list(&data->outputs[set->info->handler], set);
+    if (set->info->type == PIPE_DST) {
+        set->next_output = data->outputs[set->info->handler];
+        data->outputs[set->info->handler] = set;
+    }
 
     printf("added fifo '%s'\n", path);
 
@@ -116,6 +119,9 @@ int load_new_pipe(struct HopperData *data, const char *path) {
 }
 
 void pipe_set_status_inactive(struct PipeSet *set, struct HopperData *data) {
+    if (set->status == PIPE_INACTIVE)
+        return;
+
     if (set->info->type == PIPE_SRC)
         if (epoll_ctl(data->epoll_fd, EPOLL_CTL_DEL, set->fd, NULL) != 0)
             perror("epoll_ctl DEL");
@@ -127,9 +133,14 @@ void pipe_set_status_inactive(struct PipeSet *set, struct HopperData *data) {
 }
 
 void pipe_set_status_active(struct PipeSet *set, struct HopperData *data) {
+    if (set->status == PIPE_ACTIVE)
+        return;
+
     if (set->info->type == PIPE_SRC) {
         epoll_add_src_pipe(data, set);
     }
+
+    set->status = PIPE_ACTIVE;
 
     printf("%d/%s set to ACTIVE\n", set->info->handler, set->info->id);
 }
@@ -200,8 +211,9 @@ int handle_inotify_event(struct HopperData *data) {
 
         while (*tgt) {
             if (!strcmp((*tgt)->info->name, info->name)) {
+                struct PipeSet *to_free = *tgt;
                 *tgt = (*tgt)->next;
-                free(*tgt);
+                free(to_free);
                 break;
             }
 
@@ -218,11 +230,24 @@ int handle_inotify_event(struct HopperData *data) {
     return 0;
 }
 
+int rescan_pipes(struct HopperData *data) {
+    struct PipeSet *set = data->pipes;
+
+    while (set) {
+        if (set->status == PIPE_INACTIVE && set->info->type == PIPE_DST)
+            reopen_pipe_set(set, data);
+
+        set = set->next;
+    }
+
+    return 0;
+}
+
 int run_epoll_cycle(struct HopperData *data) {
     struct epoll_event events[MAX_EVENTS];
     int res;
 
-    int n = epoll_wait(data->epoll_fd, events, MAX_EVENTS, -1);
+    int n = epoll_wait(data->epoll_fd, events, MAX_EVENTS, 250);
     if (n < 0) {
         perror("epoll_wait");
         return n;
@@ -239,10 +264,9 @@ int run_epoll_cycle(struct HopperData *data) {
         if (events[i].events & EPOLLIN)
             if ((res = transfer_buffers(data, set, MAX_COPY_SIZE)) < 0)
                 return res;
-
-        if (events[i].events & EPOLLHUP)
-            pipe_set_status_inactive(set, data);
     }
+
+    rescan_pipes(data);
 
     return n;
 }
@@ -314,6 +338,8 @@ int main(int argc, char *argv[]) {
     int res = 0;
     while (res >= 0) {
         res = run_epoll_cycle(data);
+        if (res < 0 && errno == EINTR)
+            res = 0;
     }
 
 cleanup:

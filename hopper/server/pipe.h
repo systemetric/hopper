@@ -28,6 +28,7 @@ struct PipeSet {
     short status;
     struct PipeInfo *info;
     struct PipeSet *next;
+    struct PipeSet *next_output;
 };
 
 void close_pipe_set(struct PipeSet *set);

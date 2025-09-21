@@ -100,8 +100,6 @@ int reopen_pipe_set(struct PipeSet *set, struct HopperData *data) {
     if (set->status == PIPE_ACTIVE)
         return 0;
 
-    set->status = PIPE_ACTIVE;
-
     if ((set->fd = open(set->info->path,
                         (set->info->type == PIPE_SRC ? O_RDONLY : O_WRONLY) |
                             O_NONBLOCK)) < 0) {
@@ -137,6 +135,7 @@ struct PipeSet *open_pipe_set(const char *path) {
     set->info = info;
     set->status = PIPE_INACTIVE;
     set->next = NULL;
+    set->next_output = NULL;
     set->fd = -1;
 
     if (pipe(set->buf) < 0) {
@@ -206,7 +205,7 @@ ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
 
             remaining -= done;
         }
-        dst = dst->next;
+        dst = dst->next_output;
     }
 
     dst = data->outputs[handler_id];
@@ -227,7 +226,7 @@ ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
 
             remaining -= done;
         }
-        dst = dst->next;
+        dst = dst->next_output;
     }
 
     splice(src->buf[0], NULL, data->devnull, NULL, max, 0);
