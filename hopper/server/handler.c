@@ -20,8 +20,6 @@ static struct HandlerMapping HANDLER_MAP[] = {
     HANDLER_START_BUTTON, HANDLER_STARTER,      HANDLER_HARDWARE,
 };
 
-const int N_HANDLERS = sizeof(HANDLER_MAP) / sizeof(struct HandlerMapping);
-
 /// Maps a handler string to an ID number
 short map_handler_to_id(char *handler) {
     int n_handlers = sizeof(HANDLER_MAP) / sizeof(struct HandlerMapping);

@@ -73,7 +73,7 @@ struct HopperData *alloc_hopper_data() {
         goto err_alloc;
 
     data->outputs =
-        (struct PipeSet **)calloc(N_HANDLERS, sizeof(struct PipeSet *));
+        (struct PipeSet **)calloc(MAX_HANDLER_ID, sizeof(struct PipeSet *));
     if (!data->outputs)
         goto err_alloc;
 
