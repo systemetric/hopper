@@ -121,8 +121,6 @@ void pipe_set_status_inactive(struct PipeSet *set, struct HopperData *data) {
         if (epoll_ctl(data->epoll_fd, EPOLL_CTL_DEL, set->fd, NULL) != 0)
             perror("epoll_ctl DEL");
 
-    purge_pipe_set_buffers(set, data);
-
     close(set->fd);
     set->fd = -1;
     set->status = PIPE_INACTIVE;
@@ -133,9 +131,11 @@ void pipe_set_status_active(struct PipeSet *set, struct HopperData *data) {
     if (set->status == PIPE_ACTIVE)
         return;
 
-    if (set->info->type == PIPE_SRC) {
+    if (set->info->type == PIPE_SRC)
         epoll_add_src_pipe(data, set);
-    }
+
+    if (set->info->type == PIPE_DST && set->fd != -1)
+        flush_pipe_set_buffers(set);
 
     set->status = PIPE_ACTIVE;
 

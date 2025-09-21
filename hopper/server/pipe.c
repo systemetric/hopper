@@ -94,8 +94,8 @@ err_bad_fname:
     return NULL;
 }
 
-int purge_pipe_set_buffers(struct PipeSet *set, struct HopperData *data) {
-    return splice(set->buf[0], NULL, data->devnull, NULL, MAX_COPY_SIZE, 0);
+int flush_pipe_set_buffers(struct PipeSet *set) {
+    return splice(set->buf[0], NULL, set->fd, NULL, MAX_COPY_SIZE, 0);
 }
 
 /// Try to reopen a previously closed pipe
