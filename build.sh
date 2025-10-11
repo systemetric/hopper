@@ -2,10 +2,12 @@
 
 set -e
 
+CC=aarch64-linux-gnu-gcc
+
 echo "[*] Building Hopper server..."
 
 mkdir -p build/
-gcc -o build/hopper.server hopper/server/server.c hopper/server/pipe.c hopper/server/handler.c -Ihopper/server -Wall -Wextra -g
+$CC -o build/hopper.server hopper/server/server.c hopper/server/pipe.c hopper/server/handler.c -Ihopper/server -Wall -Wextra -g
 
 echo "[*] Installing Hopper server..."
 
