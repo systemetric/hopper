@@ -94,6 +94,20 @@ err_bad_fname:
     return NULL;
 }
 
+/// Dump pipe set buffers into /dev/null
+int flush_pipe_set_buffers_to_null(struct PipeSet *set, struct HopperData *data) {
+    while (1) {
+        ssize_t res = splice(set->buf[0], NULL, data->devnull, NULL, MAX_COPY_SIZE, 0);
+        if (res == -1 && errno == EAGAIN) {
+            break;
+        } else if (res == -1) {
+            perror("splice");
+            return -1;
+        }
+    }
+    return 0;
+}
+
 int flush_pipe_set_buffers(struct PipeSet *set) {
     ssize_t bytes_copied = 0;
     while (1) {
@@ -153,7 +167,7 @@ struct PipeSet *open_pipe_set(const char *path) {
     set->next_output = NULL;
     set->fd = -1;
 
-    if (pipe(set->buf) < 0) {
+    if (pipe2(set->buf, O_NONBLOCK) < 0) {
         free_pipe_set(&set);
         perror("pipe");
         return NULL;
@@ -212,6 +226,10 @@ ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
         ssize_t res = nb_tee(src->fd, dst->buf[1], bytes_copied == 0 ? max : bytes_copied);
         if (res <= 0) {
             if (errno == EAGAIN) {
+                // We couldn't tee into our own buffers, shit is happening
+                // (they are probably full)
+                flush_pipe_set_buffers_to_null(dst, data);
+
                 dst = dst->next_output;
                 continue;
             }
