@@ -95,7 +95,19 @@ err_bad_fname:
 }
 
 int flush_pipe_set_buffers(struct PipeSet *set) {
-    return splice(set->buf[0], NULL, set->fd, NULL, MAX_COPY_SIZE, 0);
+    ssize_t bytes_copied = 0;
+    while (1) {
+        ssize_t res = splice(set->buf[0], NULL, set->fd, NULL, MAX_COPY_SIZE, 0); 
+        if (res == -1 && errno == EAGAIN) {
+            break;
+        } else if (res == -1) {
+            perror("splice");
+            return -1;
+        }
+
+        bytes_copied += res;
+    }
+    return bytes_copied;
 }
 
 /// Try to reopen a previously closed pipe
@@ -141,7 +153,7 @@ struct PipeSet *open_pipe_set(const char *path) {
     set->next_output = NULL;
     set->fd = -1;
 
-    if (pipe2(set->buf, O_NONBLOCK) < 0) {
+    if (pipe(set->buf) < 0) {
         free_pipe_set(&set);
         perror("pipe");
         return NULL;
@@ -154,8 +166,10 @@ ssize_t nb_splice(int src, int dst, ssize_t max) {
     ssize_t bytes_copied = 0;
 
     while ((bytes_copied = splice(src, NULL, dst, NULL, max, 0)) < 0) {
-        if (errno == EAGAIN || errno == EINTR)
+        if (errno == EINTR)
             continue;
+        if (errno == EAGAIN)
+            return -1;
 
         perror("splice");
         return -1;
@@ -168,8 +182,10 @@ ssize_t nb_tee(int src, int dst, ssize_t max) {
     ssize_t bytes_copied = 0;
 
     while ((bytes_copied = tee(src, dst, max, 0)) < 0) {
-        if (errno == EAGAIN || errno == EINTR)
+        if (errno == EINTR)
             continue;
+        if (errno == EAGAIN)
+            return -1;
         if (errno == EPIPE)
             return 0;
 
@@ -193,12 +209,18 @@ ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
             continue;
         }
 
-        ssize_t res = nb_tee(src->fd, dst->buf[1], max);
+        ssize_t res = nb_tee(src->fd, dst->buf[1], bytes_copied == 0 ? max : bytes_copied);
         if (res <= 0) {
+            if (errno == EAGAIN) {
+                dst = dst->next_output;
+                continue;
+            }
             break;
         }
+
+        if (bytes_copied == 0)
+            bytes_copied = res;
         
-        bytes_copied = res;
         dst = dst->next_output;
     }
 
@@ -209,7 +231,7 @@ ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
             continue;
         }
 
-        ssize_t res = nb_splice(dst->buf[0], dst->fd, max);
+        ssize_t res = flush_pipe_set_buffers(dst);
         if (res <= 0) {
             if (errno == EPIPE) {
                 pipe_set_status_inactive(dst, data);
