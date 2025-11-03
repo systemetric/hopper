@@ -84,7 +84,7 @@ err_alloc:
 
 int epoll_add_src_pipe(struct HopperData *data, struct PipeSet *set) {
     struct epoll_event ev = {};
-    ev.events = EPOLLIN | EPOLLET;
+    ev.events = EPOLLIN;
     ev.data.ptr = (void *)set;
 
     int res;
@@ -235,6 +235,9 @@ int rescan_pipes(struct HopperData *data) {
     while (set) {
         if (set->status == PIPE_INACTIVE && set->info->type == PIPE_DST)
             reopen_pipe_set(set, data);
+
+        if (set->status == PIPE_ACTIVE && set->info->type == PIPE_DST)
+            flush_pipe_set_buffers(set);
 
         set = set->next;
     }
