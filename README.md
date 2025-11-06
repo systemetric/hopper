@@ -69,7 +69,7 @@ in non-blocking mode, since the server was single threaded, and blocking is
 non-ideal. Because of this, a 0.25 second delay was added to prevent the
 process from consuming all system resources, constantly, and crashing Shepherd.
 
-The way the current Hopper server achieves this near-zero latency, and low
+**OUT OF DATE**:The way the current Hopper server achieves this near-zero latency, and low
 system resource usage, involves the use of Linux and POSIX APIs that are not
 trivially exposed in Python. More specifically, `epoll` is used to block
 the server when no data needs to be transferred, while keeping file descriptors
@@ -79,6 +79,10 @@ into user space, allowing the kernel to effectively manage them. In effect,
 the Hopper server doesn't actually copy any data itself, reducing latency
 from the copy process, and allowing for the 1 KiB limit to be increased to
 1 MiB in a single transfer.
+
+**UPDATED**: Due to complexities and issues with using kernel buffers, a simple
+ring buffer is used instead, which is slightly slower, but probably fine
+for out use case.
 
 For coordinating which FIFOs need to receive what data, Hopper uses a filename
 format system.
