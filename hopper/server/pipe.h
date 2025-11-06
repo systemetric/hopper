@@ -22,7 +22,7 @@ struct PipeInfo {
 
 /// A structure for holding I/O pipe data
 struct PipeSet {
-    int buf[2];
+    void *rd_ptr;
     int fd;
     int inotify_fd;
     short status;
@@ -36,8 +36,7 @@ void free_pipe_set(struct PipeSet **set);
 struct PipeInfo *get_pipe_info(const char *path);
 struct PipeSet *open_pipe_set(const char *path);
 int reopen_pipe_set(struct PipeSet *set, struct HopperData *data);
-ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
-                         ssize_t max);
-int flush_pipe_set_buffers(struct PipeSet *set);
+ssize_t read_fifo(struct HopperData *data, struct PipeSet *src);
+ssize_t write_fifo(struct HopperData *data, struct PipeSet *dst);
 
 #endif // pipe_h_INCLUDED
