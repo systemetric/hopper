@@ -19,6 +19,38 @@
 // things, 0x1 is low and probably won't be used by a PipeSet pointer.
 #define INOTIFY_DATA 0x1
 
+void *get_high_read_ptr(struct HopperData *data, short handler) {
+    void *rd_ptr = NULL;
+    
+    struct PipeSet *dst = data->outputs[handler];
+    while (dst) {
+        if (dst->rd_ptr > rd_ptr)
+            rd_ptr = dst->rd_ptr;
+
+        dst = dst->next_output;
+    }
+
+    return rd_ptr;
+}
+
+void *get_low_read_ptr(struct HopperData *data, short handler) {
+    void *rd_ptr = (void *)((uintptr_t)-1); // This is the maximum value for a ptr
+    
+    struct PipeSet *dst = data->outputs[handler];
+    while (dst) {
+        if (dst->rd_ptr < rd_ptr && dst->rd_ptr)
+            rd_ptr = dst->rd_ptr;
+
+        dst = dst->next_output;
+    }
+
+    // Set to NULL if unchanged for consistency
+    if (rd_ptr == (void *)((uintptr_t)-1))
+        rd_ptr = NULL;
+
+    return rd_ptr;
+}
+
 void free_pipe_list(struct PipeSet *head) {
     struct PipeSet *set;
     while (head) {
@@ -33,6 +65,96 @@ void prepend_pipe_list(struct PipeSet **head, struct PipeSet *set) {
     *head = set;
 }
 
+struct PipeSet *remove_pipe_by_name(struct PipeSet **pipes, struct PipeInfo *info) {
+    struct PipeSet *tgt;
+
+    struct PipeSet head;
+    struct PipeInfo head_info;
+    head_info.name = "_HEAD_";
+    head.info = &head_info;
+    head.next = *pipes;
+
+    tgt = &head;
+
+    while (tgt->next) {
+        //printf("checking %s\n", tgt->next->info->name);
+        if (!strcmp(tgt->next->info->name, info->name)) {
+            struct PipeSet *to_free = tgt->next;
+           // printf("removing %s, connecting %s to %s\n", to_free->info->name, tgt->info->name, tgt->next->next->info->name);
+            tgt->next = tgt->next->next;
+
+            // This is redundant if the pipe is not at the start of the list
+            *pipes = head.next;
+            return to_free;
+        }
+
+        tgt = tgt->next;
+    }
+
+    return NULL;
+}
+
+struct PipeSet *remove_output_pipe_by_name(struct PipeSet **pipes, struct PipeInfo *info) {
+    struct PipeSet *tgt;
+
+    struct PipeSet head;
+    struct PipeInfo head_info;
+    head_info.name = "_HEAD_";
+    head.info = &head_info;
+    head.next_output = *pipes;
+
+    tgt = &head;
+
+    while (tgt->next_output) {
+        //printf("checking %s\n", tgt->next_output->info->name);
+        if (!strcmp(tgt->next_output->info->name, info->name)) {
+            struct PipeSet *to_free = tgt->next_output;
+          //  printf("removing %s, connecting %s to %s\n", to_free->info->name, tgt->info->name, tgt->next_output->next_output->info->name);
+            tgt->next_output = tgt->next_output->next_output;
+
+            // This is redundant if the pipe is not at the start of the list
+            *pipes = head.next_output;
+            return to_free;
+        }
+
+        tgt = tgt->next_output;
+    }
+
+    return NULL;
+}
+
+void free_hopper_buffer(struct HopperBuffer *buffer) {
+    if (!buffer)
+        return;
+
+    if (buffer->buf)
+        free(buffer->buf);
+
+    free(buffer);
+}
+
+struct HopperBuffer *alloc_hopper_buffer() {
+    struct HopperBuffer *buffer = (struct HopperBuffer *)malloc(sizeof(struct HopperBuffer));
+    if (!buffer) {
+        perror("alloc");
+        return NULL;
+    }
+
+    buffer->buf = (void *)malloc(MAX_BUF_SIZE);
+    if (!buffer->buf) {
+        perror("alloc");
+        free(buffer);
+        return NULL;
+    }
+
+    buffer->wr_ptr = buffer->buf;
+    buffer->last_wr_ptr = buffer->buf;
+    buffer->buf_len = MAX_BUF_SIZE;
+    buffer->buf_end = buffer->buf + buffer->buf_len;
+
+    return buffer;
+}
+
 /// Safely free a HopperData structure
 void free_hopper_data(struct HopperData *data) {
     if (!data)
@@ -42,6 +164,14 @@ void free_hopper_data(struct HopperData *data) {
 
     if (data->outputs)
         free(data->outputs);
+
+    for (int i = 0; i < MAX_HANDLER_ID + 1; i++) {
+        if (data->buffers[i])
+            free(data->buffers[i]);
+    }
+
+    if (data->buffers)
+        free(data->buffers);
 }
 
 void close_hopper_fds(struct HopperData *data) {
@@ -56,8 +186,6 @@ void close_hopper_fds(struct HopperData *data) {
 
     do {
         close(set->fd);
-        close(set->buf[0]);
-        close(set->buf[1]);
         set = set->next;
     } while (set);
 }
@@ -74,6 +202,16 @@ struct HopperData *alloc_hopper_data() {
     if (!data->outputs)
         goto err_alloc;
 
+    data->buffers = (struct HopperBuffer **)calloc(MAX_HANDLER_ID + 1, sizeof(struct HopperData *));
+    if (!data->buffers)
+        goto err_alloc;
+
+    for (int i = 0; i < MAX_HANDLER_ID + 1; i++) {
+        data->buffers[i] = alloc_hopper_buffer();
+        if (!data->buffers[i])
+            goto err_alloc;
+    }
+
     return data;
 
 err_alloc:
@@ -84,7 +222,7 @@ err_alloc:
 
 int epoll_add_src_pipe(struct HopperData *data, struct PipeSet *set) {
     struct epoll_event ev = {};
-    ev.events = EPOLLIN | EPOLLET;
+    ev.events = EPOLLIN;
     ev.data.ptr = (void *)set;
 
     int res;
@@ -104,6 +242,8 @@ int load_new_pipe(struct HopperData *data, const char *path) {
     if (set->info->type == PIPE_DST) {
         set->next_output = data->outputs[set->info->handler];
         data->outputs[set->info->handler] = set;
+
+        set->rd_ptr = NULL;
     }
 
     printf("added fifo '%s'\n", path);
@@ -134,8 +274,10 @@ void pipe_set_status_active(struct PipeSet *set, struct HopperData *data) {
     if (set->info->type == PIPE_SRC)
         epoll_add_src_pipe(data, set);
 
-    if (set->info->type == PIPE_DST && set->fd != -1)
-        flush_pipe_set_buffers(set);
+    if (!set->rd_ptr)   // For freshly created pipes
+        set->rd_ptr = data->buffers[set->info->handler]->wr_ptr;
+    else    // Pipes transitioning from inactive get last message
+        set->rd_ptr = data->buffers[set->info->handler]->last_wr_ptr;
 
     set->status = PIPE_ACTIVE;
 
@@ -206,20 +348,23 @@ int handle_inotify_event(struct HopperData *data) {
         if (!info)
             return 1;
 
-        struct PipeSet **tgt = &data->pipes;
+        int removed = 0;
 
-        while (*tgt) {
-            if (!strcmp((*tgt)->info->name, info->name)) {
-                struct PipeSet *to_free = *tgt;
-                *tgt = (*tgt)->next;
+        struct PipeSet *to_free = remove_pipe_by_name(&data->pipes, info);
+        if (to_free && info->type == PIPE_DST) {
+            // Output pipes need to be removed from a separate linked list
+            // as well as the main one
+            to_free = remove_output_pipe_by_name(&data->outputs[info->handler], info);
+            if (to_free) {
                 free(to_free);
-                break;
+                removed = 1;
             }
-
-            tgt = &(*tgt)->next;
+        } else if (to_free) {
+            free(to_free);
+            removed = 1;
         }
 
-        if (tgt)
+        if (removed)
             printf("removed %d/%s\n", info->handler, info->name);
         else
             printf("pipe %d/%s not found\n", info->handler, info->name);
@@ -229,12 +374,15 @@ int handle_inotify_event(struct HopperData *data) {
     return 0;
 }
 
-int rescan_pipes(struct HopperData *data) {
+int flush_and_scan_pipes(struct HopperData *data) {
     struct PipeSet *set = data->pipes;
 
     while (set) {
-        if (set->status == PIPE_INACTIVE && set->info->type == PIPE_DST)
+        if (set->status == PIPE_INACTIVE)
             reopen_pipe_set(set, data);
+
+        if (set->status == PIPE_ACTIVE && set->info->type == PIPE_DST)
+            write_fifo(data, set);
 
         set = set->next;
     }
@@ -261,11 +409,14 @@ int run_epoll_cycle(struct HopperData *data) {
         struct PipeSet *set = (struct PipeSet *)events[i].data.ptr;
 
         if (events[i].events & EPOLLIN)
-            if ((res = transfer_buffers(data, set, MAX_COPY_SIZE)) < 0)
+            if ((res = read_fifo(data, set)) < 0)
                 return res;
+
+        if (events[i].events & EPOLLHUP)
+            pipe_set_status_inactive(set, data);
     }
 
-    rescan_pipes(data);
+    flush_and_scan_pipes(data);
 
     return n;
 }

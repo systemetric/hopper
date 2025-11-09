@@ -2,7 +2,7 @@
 
 set -e
 
-CC=aarch64-linux-gnu-gcc
+CC=gcc
 
 echo "[*] Building Hopper server..."
 

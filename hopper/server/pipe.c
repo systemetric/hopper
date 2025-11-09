@@ -13,12 +13,7 @@
 /// Close all file descriptors in a PipeSet object
 /// Threads should be joined first
 void close_pipe_set(struct PipeSet *set) {
-    close(set->buf[0]);
-    close(set->buf[1]);
     close(set->fd);
-
-    set->buf[0] = -1;
-    set->buf[1] = -1;
     set->fd = -1;
 }
 
@@ -94,22 +89,6 @@ err_bad_fname:
     return NULL;
 }
 
-int flush_pipe_set_buffers(struct PipeSet *set) {
-    ssize_t bytes_copied = 0;
-    while (1) {
-        ssize_t res = splice(set->buf[0], NULL, set->fd, NULL, MAX_COPY_SIZE, 0); 
-        if (res == -1 && errno == EAGAIN) {
-            break;
-        } else if (res == -1) {
-            perror("splice");
-            return -1;
-        }
-
-        bytes_copied += res;
-    }
-    return bytes_copied;
-}
-
 /// Try to reopen a previously closed pipe
 int reopen_pipe_set(struct PipeSet *set, struct HopperData *data) {
     if (set->status == PIPE_ACTIVE)
@@ -152,101 +131,111 @@ struct PipeSet *open_pipe_set(const char *path) {
     set->next = NULL;
     set->next_output = NULL;
     set->fd = -1;
-
-    if (pipe(set->buf) < 0) {
-        free_pipe_set(&set);
-        perror("pipe");
-        return NULL;
-    }
+    set->rd_ptr = NULL;
 
     return set;
 }
 
-ssize_t nb_splice(int src, int dst, ssize_t max) {
+ssize_t nb_read(int fd, void *buf, ssize_t max) {
+    if (max == 0)
+        return 0;
+
     ssize_t bytes_copied = 0;
 
-    while ((bytes_copied = splice(src, NULL, dst, NULL, max, 0)) < 0) {
-        if (errno == EINTR)
-            continue;
-        if (errno == EAGAIN)
+    while (bytes_copied < max) {
+        ssize_t res = read(fd, buf + bytes_copied, max - bytes_copied);
+        if (res == -1 && (errno == EAGAIN || errno == EINTR))
+            return bytes_copied;
+        else if (res == -1) {
+            perror("read");
             return -1;
+        }
+        else if (res == 0)
+            break;
 
-        perror("splice");
-        return -1;
+        bytes_copied += res;
+    }
+    
+    return bytes_copied;
+}
+
+ssize_t nb_write(int fd, void *buf, ssize_t max) {
+    if (max == 0)
+        return 0;
+    
+    ssize_t bytes_copied = 0;
+
+    while (bytes_copied < max) {
+        ssize_t res = write(fd, buf + bytes_copied, max - bytes_copied);
+        if (res == -1 && (errno == EAGAIN || errno == EINTR))
+            return bytes_copied;
+        else if (res == -1) {
+            perror("write");
+            return -1;
+        }
+
+        bytes_copied += res;
     }
 
     return bytes_copied;
 }
 
-ssize_t nb_tee(int src, int dst, ssize_t max) {
-    ssize_t bytes_copied = 0;
+ssize_t read_fifo(struct HopperData *data, struct PipeSet *src) {
+    void *high_read_ptr = get_high_read_ptr(data, src->info->handler);
+    void *low_read_ptr = get_low_read_ptr(data, src->info->handler);
+    void *wr_ptr = data->buffers[src->info->handler]->wr_ptr;
+    ssize_t max_read = 0;
 
-    while ((bytes_copied = tee(src, dst, max, 0)) < 0) {
-        if (errno == EINTR)
-            continue;
-        if (errno == EAGAIN)
-            return -1;
-        if (errno == EPIPE)
-            return 0;
+    if (!low_read_ptr || !high_read_ptr || wr_ptr >= high_read_ptr)
+        max_read = data->buffers[src->info->handler]->buf_end - wr_ptr;
+    else if (wr_ptr < low_read_ptr)
+        max_read = low_read_ptr - wr_ptr;    
 
-        perror("tee");
+    if (max_read == 0)
+        return 0;
+
+    ssize_t res = nb_read(src->fd, wr_ptr, max_read);
+    if (res == -1)
         return -1;
-    }
 
-    return bytes_copied;
+    wr_ptr += res;
+
+    if (wr_ptr >= data->buffers[src->info->handler]->buf_end)
+        wr_ptr = data->buffers[src->info->handler]->buf;
+
+    data->buffers[src->info->handler]->last_wr_ptr = data->buffers[src->info->handler]->wr_ptr;
+    data->buffers[src->info->handler]->wr_ptr = wr_ptr;
+
+    if (res > 0)
+        printf("%d/%s -> %zd bytes\n", src->info->handler, src->info->id, res);
+
+    return res;
 }
 
-ssize_t transfer_buffers(struct HopperData *data, struct PipeSet *src,
-                         ssize_t max) {
-    struct PipeSet *dst = NULL;
-    ssize_t bytes_copied = 0;
-    short handler_id = src->info->handler;
+ssize_t write_fifo(struct HopperData *data, struct PipeSet *dst) {
+    ssize_t max_write = 0;
 
-    dst = data->outputs[handler_id];
-    while (dst) {
-        if (dst->status == PIPE_INACTIVE) {
-            dst = dst->next_output;
-            continue;
-        }
+    if (dst->rd_ptr > data->buffers[dst->info->handler]->wr_ptr)
+        max_write = data->buffers[dst->info->handler]->buf_end - dst->rd_ptr;
+    else if (dst->rd_ptr < data->buffers[dst->info->handler]->wr_ptr)
+        max_write = data->buffers[dst->info->handler]->wr_ptr - dst->rd_ptr;
 
-        ssize_t res = nb_tee(src->fd, dst->buf[1], bytes_copied == 0 ? max : bytes_copied);
-        if (res <= 0) {
-            if (errno == EAGAIN) {
-                dst = dst->next_output;
-                continue;
-            }
-            break;
-        }
+    if (max_write == 0)
+        return 0;
 
-        if (bytes_copied == 0)
-            bytes_copied = res;
-        
-        dst = dst->next_output;
-    }
+    ssize_t res = nb_write(dst->fd, dst->rd_ptr, max_write);
+    if (res == -1 && errno == EPIPE)
+        pipe_set_status_inactive(dst, data);
+    if (res == -1)
+        return -1;
 
-    dst = data->outputs[handler_id];
-    while (dst) {
-        if (dst->status == PIPE_INACTIVE) {
-            dst = dst->next_output;
-            continue;
-        }
+    dst->rd_ptr += res;
 
-        ssize_t res = flush_pipe_set_buffers(dst);
-        if (res <= 0) {
-            if (errno == EPIPE) {
-                pipe_set_status_inactive(dst, data);
-                continue;
-            }
-            break;
-        }
-        
-        dst = dst->next_output;
-    }
+    if (dst->rd_ptr >= data->buffers[dst->info->handler]->buf_end)
+        dst->rd_ptr = data->buffers[dst->info->handler]->buf;
 
-    splice(src->fd, NULL, data->devnull, NULL, bytes_copied, 0);
+    if (res > 0)
+        printf("%d/%s <- %zd bytes\n", dst->info->handler, dst->info->id, res);
 
-    printf("%d/%s copied %zd bytes\n", src->info->handler, src->info->id,
-           bytes_copied);
-
-    return bytes_copied;
+    return res;
 }
