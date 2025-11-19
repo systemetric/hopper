@@ -356,11 +356,11 @@ int handle_inotify_event(struct HopperData *data) {
             // as well as the main one
             to_free = remove_output_pipe_by_name(&data->outputs[info->handler], info);
             if (to_free) {
-                free(to_free);
+                free_pipe_set(&to_free);
                 removed = 1;
             }
         } else if (to_free) {
-            free(to_free);
+            free_pipe_set(&to_free);
             removed = 1;
         }
 
