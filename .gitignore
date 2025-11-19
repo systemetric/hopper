@@ -5,3 +5,5 @@ build/
 hopper.egg-info/
 tmplog.txt
 .gdb_history
+zig-out/
+.zig-cache/
