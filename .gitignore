@@ -5,3 +5,4 @@ build/
 hopper.egg-info/
 tmplog.txt
 .gdb_history
+.vscode/
