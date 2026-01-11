@@ -1,6 +1,6 @@
 #include <cstring>
 
-#include "hopper/server/buffer.hpp"
+#include "hopper/daemon/buffer.hpp"
 
 namespace hopper {
 

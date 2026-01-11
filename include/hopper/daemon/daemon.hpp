@@ -1,16 +1,16 @@
-#ifndef hopper_hpp_INCLUDED
-#define hopper_hpp_INCLUDED
+#ifndef daemon_hpp_INCLUDED
+#define daemon_hpp_INCLUDED
 
 #include <map>
 #include <string>
 #include <vector>
 
-#include "hopper/server/buffer.hpp"
-#include "hopper/server/pipe.hpp"
+#include "hopper/daemon/buffer.hpp"
+#include "hopper/daemon/pipe.hpp"
 
 namespace hopper {
 
-class HopperServer {
+class HopperDaemon {
 private:
     std::map<std::string, int> m_handlers;
 
@@ -21,4 +21,4 @@ private:
 
 }; // namespace hopper
 
-#endif // hopper_hpp_INCLUDED
+#endif // server_hpp_INCLUDED

@@ -1,5 +1,5 @@
 executable(
-    'hopper',
+    'hopperd',
     'main.cpp',
     'buffer.cpp',
     'pipe.cpp',

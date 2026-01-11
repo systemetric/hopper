@@ -1,7 +1,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "hopper/server/pipe.hpp"
+#include "hopper/daemon/pipe.hpp"
 
 namespace hopper {
 

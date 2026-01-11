@@ -13,5 +13,5 @@ install_headers(
 )
 
 subdir('client')
-subdir('server')
+subdir('daemon')
 
