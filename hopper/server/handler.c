@@ -18,6 +18,7 @@ static struct HandlerMapping HANDLER_MAP[] = {
 #endif
 
     HANDLER_START_BUTTON, HANDLER_STARTER,      HANDLER_HARDWARE,
+    HANDLER_HARDWARE_RX,  HANDLER_HARDWARE_TX,
 };
 
 /// Maps a handler string to an ID number
