@@ -16,7 +16,7 @@ void BufferMarker::seek(size_t offset, size_t max, SeekDirection dir) {
 /* HopperBuffer */
 
 BufferMarker *HopperBuffer::create_marker() {
-    auto *m = new BufferMarker(0);
+    auto *m = new BufferMarker(m_edge);
     m_markers.push_back(m);
     return m;
 }
