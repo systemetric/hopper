@@ -1,8 +1,5 @@
-pipes/
-__pycache__/
-dist/
+.cache/
+.direnv/
 build/
-hopper.egg-info/
-tmplog.txt
-.gdb_history
-.vscode/
+compile_commands.json
+result
