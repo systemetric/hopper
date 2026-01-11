@@ -2,7 +2,7 @@ project(
     'hopper',
     ['cpp'],
     version: '0.1.0',
-    default_options: ['warning_level=2'],
+    default_options: ['optimization=2', 'warning_level=2'],
 )
 
 inc = include_directories('include')
