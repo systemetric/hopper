@@ -57,10 +57,12 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
         if (pipe_type == PipeType::NONE)
             return;
 
-        std::pair<uint64_t, int> pipe =
+        HopperPipe *pipe =
             (pipe_type == PipeType::IN ? endpoint->add_input_pipe(p)
                                        : endpoint->add_output_pipe(p));
-        try_add_pipe(pipe, pipe_type);
+
+        if (pipe != nullptr)
+            add_pipe(endpoint, pipe);
     }
 }
 

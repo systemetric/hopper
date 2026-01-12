@@ -29,21 +29,24 @@ private:
     std::filesystem::path m_path;
 
     int m_fd = -1;
-    int m_id;
+    uint64_t m_id;
 
 public:
-    HopperPipe(int id, PipeType type, std::filesystem::path path,
+    HopperPipe(uint64_t id, PipeType type, std::filesystem::path path,
                BufferMarker *marker = nullptr);
     ~HopperPipe();
 
     int open_pipe();
+    void close_pipe();
     size_t write_pipe(void *src, size_t len);
     size_t read_pipe(void *dst, size_t len);
 
     const std::filesystem::path &path() { return m_path; }
     BufferMarker *marker() { return m_marker; }
     PipeStatus status() { return m_status; }
-    int id() { return m_id; }
+    PipeType type() { return m_type; }
+    const std::string &name() { return m_name; }
+    uint64_t id() { return m_id; }
     int fd() { return m_fd; }
 };
 

@@ -49,7 +49,8 @@ private:
     void handle_endpoint_inotify(struct inotify_event *ev, HopperEndpoint *endpoint);
 
     void process_events(struct epoll_event *events, int n_events);
-    void try_add_pipe(std::pair<uint64_t, int> pipe, PipeType type);
+    void remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id);
+    void add_pipe(HopperEndpoint *endpoint, HopperPipe *pipe);
     void refresh_pipes();
 public:
     HopperDaemon(std::filesystem::path path, int max_events = 64,

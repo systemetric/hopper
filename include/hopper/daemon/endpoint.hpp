@@ -42,10 +42,9 @@ public:
     ~HopperEndpoint();
 
     void on_pipe_readable(uint64_t id);
-    void on_pipe_writable(uint64_t id);
 
-    std::pair<uint64_t, int> add_input_pipe(const std::filesystem::path &path);
-    std::pair<uint64_t, int> add_output_pipe(const std::filesystem::path &path);
+    HopperPipe *add_input_pipe(const std::filesystem::path &path);
+    HopperPipe *add_output_pipe(const std::filesystem::path &path);
     void remove_input_pipe(const std::filesystem::path &path);
     void remove_output_pipe(const std::filesystem::path &path);
 

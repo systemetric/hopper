@@ -24,10 +24,10 @@ public:
     BufferMarker* create_marker();
 
     size_t write(void *src, size_t len);
-    size_t write(const HopperPipe &pipe, size_t len);
+    size_t write(HopperPipe *pipe);
 
     size_t read(BufferMarker *marker, void *dst, size_t len);
-    size_t read(BufferMarker *marker, const HopperPipe &pipe, size_t len);
+    size_t read(HopperPipe *pipe);
 
     size_t max_write();
     size_t max_read(BufferMarker *marker);

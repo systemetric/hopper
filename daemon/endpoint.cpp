@@ -3,6 +3,7 @@
 
 #include "hopper/daemon/endpoint.hpp"
 #include "hopper/daemon/pipe.hpp"
+#include "hopper/daemon/util.hpp"
 
 namespace hopper {
 
@@ -19,44 +20,49 @@ HopperEndpoint::~HopperEndpoint() {
 }
 
 void HopperEndpoint::on_pipe_readable(uint64_t id) {
-    std::cout << "ID " << id << " is readable\n";
+    if (!m_inputs.contains(id))
+        return;
+
+    HopperPipe *pipe = m_inputs[id];
+    
+    size_t res = m_buffer.write(pipe);
+    if (res == (size_t)-1)
+        throw_errno("read");
+
+    std::cout << pipe->name() << "(" << m_name << ") -> " << res << " bytes\n";
 }
 
-void HopperEndpoint::on_pipe_writable(uint64_t id) {
-    std::cout << "ID " << id << " is writable\n";
-}
-
-std::pair<uint64_t, int> HopperEndpoint::add_input_pipe(const std::filesystem::path &path) {
+HopperPipe *HopperEndpoint::add_input_pipe(const std::filesystem::path &path) {
     if (!std::filesystem::is_fifo(path))
-        return std::make_pair(0, -1);
+        return nullptr;
     
     uint64_t id = next_pipe_id(1); // Type 1 for input
     if (id == 0)    // ID 0 is never valid
-        return std::make_pair(0, -1);
+        return nullptr;
 
     std::cout << "OPEN IN " << path << "\n";
     
     HopperPipe *p = new HopperPipe(id, PipeType::IN, path, nullptr);
     m_inputs[id] = p;
 
-    return std::make_pair(id, p->fd());
+    return p;
 }
 
-std::pair<uint64_t, int> HopperEndpoint::add_output_pipe(const std::filesystem::path &path) {
+HopperPipe *HopperEndpoint::add_output_pipe(const std::filesystem::path &path) {
     if (!std::filesystem::is_fifo(path))
-        return std::make_pair(0, -1);
+        return nullptr;
 
     BufferMarker *marker = m_buffer.create_marker();
     uint64_t id = next_pipe_id(0); // Type 0 for output
     if (id == 0)
-        return std::make_pair(0, -1);
+        return nullptr;
     
     std::cout << "OPEN OUT " << path << "\n";
     
     HopperPipe *p = new HopperPipe(id, PipeType::OUT, path, marker);
     m_outputs[id] = p;
 
-    return std::make_pair(id, p->fd());
+    return p;
 }
 
 void HopperEndpoint::remove_input_pipe(const std::filesystem::path &path) {

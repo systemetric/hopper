@@ -9,12 +9,9 @@ namespace hopper {
 
 /* HopperPipe */
 
-HopperPipe::HopperPipe(int id, PipeType type, std::filesystem::path path, BufferMarker *marker)
+HopperPipe::HopperPipe(uint64_t id, PipeType type, std::filesystem::path path, BufferMarker *marker)
     : m_marker(marker), m_type(type), m_path(path), m_id(id) {
-
-    std::string extension = path.extension();
-    std::string pipe_name = path.replace_extension("").filename();
-
+    m_name = path.replace_extension("").filename();
     open_pipe();
 }
 
@@ -47,6 +44,16 @@ int HopperPipe::open_pipe() {
     m_status = PipeStatus::ACTIVE;
 
     return 1;
+}
+
+void HopperPipe::close_pipe() {
+    if (m_status == PipeStatus::INACTIVE)
+        return;
+
+    m_status = PipeStatus::INACTIVE;
+
+    if (m_fd != -1)
+        close(m_fd);
 }
 
 size_t HopperPipe::write_pipe(void *src, size_t len) {

@@ -1,6 +1,7 @@
 #include <cstring>
 
 #include "hopper/daemon/buffer.hpp"
+#include "hopper/daemon/pipe.hpp"
 
 namespace hopper {
 
@@ -42,6 +43,33 @@ size_t HopperBuffer::write(void *src, size_t len) {
     m_edge = (m_edge + next_len) % m_buf.size();
 
     done_len += next_len;
+    return done_len;
+}
+
+size_t HopperBuffer::write(HopperPipe *pipe) {
+    size_t max_len = max_write();
+    size_t done_len = 0;
+
+    size_t next_len = std::min((m_buf.size() - m_edge), max_len);
+    size_t res = pipe->read_pipe(&m_buf[m_edge], next_len);
+    if (res == (size_t)-1)
+        // -1 indicates read error
+        return -1;
+
+    m_edge = (m_edge + res) % m_buf.size();
+    done_len += res;
+    if (res <= next_len)
+        // read_pipe reads as much as possible up to next_len, so the pipe is
+        // empty here
+        return done_len;
+
+    next_len = max_len - next_len;
+    res = pipe->read_pipe(&m_buf[m_edge], next_len);
+    if (res == (size_t)-1)
+        return -1;
+
+    m_edge = (m_edge + res) % m_buf.size();
+    done_len += res;
     return done_len;
 }
 
