@@ -1,90 +1,82 @@
 #include <filesystem>
-#include <sys/inotify.h>
-#include <utility>
+#include <iostream>
 
-#include "hopper/daemon/daemon.hpp"
 #include "hopper/daemon/endpoint.hpp"
-#include "hopper/daemon/util.hpp"
+#include "hopper/daemon/pipe.hpp"
 
 namespace hopper {
 
-HopperEndpoint::HopperEndpoint(int id, std::filesystem::path path)
-    : m_path(path), m_id(id) {
+HopperEndpoint::HopperEndpoint(uint32_t id, int watch_fd, std::filesystem::path path)
+    : m_path(path), m_id(id), m_watch_fd(watch_fd) {
     m_name = path.filename();
-
-    // Why have I made my life so hard?
-
-    m_in_dir = path / "in";
-    std::pair<int, int> in_notify = create_inotify(m_in_dir, nullptr);
-    validate_inotify(in_notify);
-    m_inotify_in_fd = in_notify.first;
-    m_inotify_in_watch = in_notify.second;
-
-    m_out_dir = path / "out";
-    std::pair<int, int> out_notify = create_inotify(m_out_dir, nullptr);
-    validate_inotify(out_notify);
-    m_inotify_out_fd = out_notify.first;
-    m_inotify_out_watch = out_notify.second;
 }
 
-std::pair<int, int>
-HopperEndpoint::create_inotify(std::filesystem::path path,
-                               std::function<int(HopperEvent *)> callback) {
-    if (!std::filesystem::exists(path))
-        std::filesystem::create_directories(path);
-
-    int fd = inotify_init();
-    if (fd < 0)
-        return std::make_pair(-1, -1);
-
-    int watch = inotify_add_watch(fd, path.c_str(), IN_CREATE | IN_DELETE);
-    if (watch < 0)
-        return std::make_pair(fd, -1);
-
-    HopperEvent *ev = new HopperEvent;
-    ev->fd = fd;
-    ev->data.u64 = 0;
-    ev->callback = callback;
-
-    HopperEndpointOperation *add_ev = new HopperEndpointOperation();
-    add_ev->ev = ev;
-    add_ev->type = HopperEndpointOperationType::CREATE_EV;
-
-    m_operations.push_back(add_ev);
-
-    return std::make_pair(fd, watch);
+HopperEndpoint::~HopperEndpoint() {
+    for (const auto &[_, pipe] : m_inputs)
+        delete pipe;
+    for (const auto &[_, pipe] : m_outputs)
+        delete pipe;
 }
 
-void HopperEndpoint::validate_inotify(std::pair<int, int> &inotify) {
-    if (inotify.first == -1)
-        throw_errno("inotify_init");
-    if (inotify.second == -1)
-        throw_errno("inotify_add_watch");
+void HopperEndpoint::on_pipe_readable(uint64_t id) {
+    std::cout << "ID " << id << " is readable\n";
 }
 
-int HopperEndpoint::refresh(HopperDaemon *daemon) {
-    while (!m_operations.empty()) {
-        HopperEndpointOperation *op = m_operations.back();
+void HopperEndpoint::on_pipe_writable(uint64_t id) {
+    std::cout << "ID " << id << " is writable\n";
+}
 
-        int r = 0;
-        switch (op->type) {
-            case HopperEndpointOperationType::CREATE_EV:
-                r = daemon->add_event(op->ev);
-                break;
-            case HopperEndpointOperationType::DELETE_EV:
-                r = daemon->remove_event(op->ev->id);
-                break;
+std::pair<uint64_t, int> HopperEndpoint::add_input_pipe(const std::filesystem::path &path) {
+    if (!std::filesystem::is_fifo(path))
+        return std::make_pair(0, -1);
+    
+    uint64_t id = next_pipe_id(1); // Type 1 for input
+    if (id == 0)    // ID 0 is never valid
+        return std::make_pair(0, -1);
+
+    std::cout << "OPEN IN " << path << "\n";
+    
+    HopperPipe *p = new HopperPipe(id, PipeType::IN, path, nullptr);
+    m_inputs[id] = p;
+
+    return std::make_pair(id, p->fd());
+}
+
+std::pair<uint64_t, int> HopperEndpoint::add_output_pipe(const std::filesystem::path &path) {
+    if (!std::filesystem::is_fifo(path))
+        return std::make_pair(0, -1);
+
+    BufferMarker *marker = m_buffer.create_marker();
+    uint64_t id = next_pipe_id(0); // Type 0 for output
+    if (id == 0)
+        return std::make_pair(0, -1);
+    
+    std::cout << "OPEN OUT " << path << "\n";
+    
+    HopperPipe *p = new HopperPipe(id, PipeType::OUT, path, marker);
+    m_outputs[id] = p;
+
+    return std::make_pair(id, p->fd());
+}
+
+void HopperEndpoint::remove_input_pipe(const std::filesystem::path &path) {
+    for (const auto &[_, pipe] : m_inputs) {
+        if (pipe->path() == path) {
+            std::cout << "CLOSE IN " << path << "\n";
+            m_inputs.erase(pipe->id());
+            break;
         }
-
-        delete op;
-
-        m_operations.pop_back();
-
-        if (r != 0)
-            return r;
     }
+}
 
-    return 0;
+void HopperEndpoint::remove_output_pipe(const std::filesystem::path &path) {
+    for (const auto &[_, pipe] : m_outputs) {
+        if (pipe->path() == path) {
+            std::cout << "CLOSE OUT " << path << "\n";
+            m_outputs.erase(pipe->id());
+            break;
+        }
+    }
 }
 
 }; // namespace hopper

@@ -1,20 +1,21 @@
 #include <fcntl.h>
+#include <iostream>
 #include <unistd.h>
 
 #include "hopper/daemon/pipe.hpp"
+#include "hopper/daemon/util.hpp"
 
 namespace hopper {
 
 /* HopperPipe */
 
-HopperPipe::HopperPipe(std::string name, int handler, PipeType type,
-                       std::filesystem::path path, BufferMarker *marker)
-    : m_marker(marker), m_name(name), m_handler(handler), m_type(type),
-      m_path(path) {
-    if (this->open_pipe())
-        m_status = PipeStatus::ACTIVE;
-    else
-        m_status = PipeStatus::INACTIVE;
+HopperPipe::HopperPipe(int id, PipeType type, std::filesystem::path path, BufferMarker *marker)
+    : m_marker(marker), m_type(type), m_path(path), m_id(id) {
+
+    std::string extension = path.extension();
+    std::string pipe_name = path.replace_extension("").filename();
+
+    open_pipe();
 }
 
 HopperPipe::~HopperPipe() {
@@ -29,11 +30,21 @@ int HopperPipe::open_pipe() {
     int fd = open(m_path.c_str(),
                   (m_type == PipeType::IN ? O_RDONLY : O_WRONLY) | O_NONBLOCK);
     if (fd < 0) {
-        perror("open");
+        if (m_type == PipeType::OUT && errno == ENXIO) {
+            // No readers available
+            m_status = PipeStatus::INACTIVE;
+            m_fd = -1;
+            return 0;
+        }
+
+        m_status = PipeStatus::INACTIVE;
+        m_fd = -1;
+        throw_errno("open");
         return 0;
     }
 
     m_fd = fd;
+    m_status = PipeStatus::ACTIVE;
 
     return 1;
 }

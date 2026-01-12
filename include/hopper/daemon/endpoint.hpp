@@ -1,66 +1,64 @@
 #ifndef endpoint_hpp_INCLUDED
 #define endpoint_hpp_INCLUDED
 
-#include <filesystem>
-#include <map>
+#include <unordered_map>
 
 #include "hopper/daemon/buffer.hpp"
-#include "hopper/daemon/event.hpp"
 #include "hopper/daemon/pipe.hpp"
 
 namespace hopper {
 
-class HopperDaemon;
-
-enum HopperEndpointOperationType {
-    CREATE_EV,
-    DELETE_EV,
-};
-
-struct HopperEndpointOperation {
-    HopperEndpointOperationType type;
-    HopperEvent *ev;
-};
-
 class HopperEndpoint {
 private:
-    std::map<std::filesystem::path, HopperPipe> m_inputs;
-    std::map<std::filesystem::path, HopperPipe> m_outputs;
-    std::vector<HopperEvent *> m_events;
-    std::vector<HopperEndpointOperation *> m_operations;
+    std::unordered_map<uint64_t, HopperPipe *> m_inputs;
+    std::unordered_map<uint64_t, HopperPipe *> m_outputs;
 
     HopperBuffer m_buffer;
 
+    uint64_t m_last_pipe_id = 1;
+    uint64_t next_pipe_id(uint8_t type) {
+        if (m_last_pipe_id > ((1ULL << 39) - 1))
+            return 0;
+
+        // I can say with high confidence, that we will probably
+        // never hit this limit.
+
+        // Bit mask for pipe ID (64-bit):
+        // EEEEEEEEEEEEEEEEEEEEEEEEPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPT
+        // EEE: Endpoint ID, 24-bit, ~ 16 million endpoints
+        // PPP: Pipe ID, 39-bit, ~ 550 billion pipes per endpoint
+        // T: Type, 1 for input, 0 for output
+        return (((uint64_t)m_id) << 40) |
+               ((m_last_pipe_id++ << 1) & 0xFFFFFFFFFF) | (type & 0x1);
+    }
+
     std::filesystem::path m_path;
-    std::filesystem::path m_in_dir;
-    std::filesystem::path m_out_dir;
-
-    int m_inotify_in_fd;
-    int m_inotify_in_watch;
-
-    int m_inotify_out_fd;
-    int m_inotify_out_watch;
-
     std::string m_name;
-    int m_id;
-
-    // First value is inotify fd, second is watch id
-    std::pair<int, int>
-    create_inotify(std::filesystem::path path,
-                   std::function<int(HopperEvent *)> callback);
-    void validate_inotify(std::pair<int, int> &inotify);
+    uint32_t m_id;
+    int m_watch_fd;
 
 public:
-    HopperEndpoint(int id, std::filesystem::path path);
+    HopperEndpoint(uint32_t id, int watch_fd, std::filesystem::path path);
+    ~HopperEndpoint();
 
-    // This is a weird fucntion. This is called by the daemon once every loop
-    // iteration, which then allows endpoints to manipulate daemon state such as
-    // updating events, etc.
-    int refresh(HopperDaemon *d);
+    void on_pipe_readable(uint64_t id);
+    void on_pipe_writable(uint64_t id);
 
-    int id() { return m_id; }
-    const std::string &name() { return m_name; }
+    std::pair<uint64_t, int> add_input_pipe(const std::filesystem::path &path);
+    std::pair<uint64_t, int> add_output_pipe(const std::filesystem::path &path);
+    void remove_input_pipe(const std::filesystem::path &path);
+    void remove_output_pipe(const std::filesystem::path &path);
+
     const std::filesystem::path &path() { return m_path; }
+    const std::string &name() { return m_name; }
+    const std::unordered_map<uint64_t, HopperPipe *> inputs() {
+        return m_inputs;
+    }
+    const std::unordered_map<uint64_t, HopperPipe *> outputs() {
+        return m_outputs;
+    }
+    int id() { return m_id; }
+    int watch_fd() { return m_watch_fd; }
 };
 
 }; // namespace hopper

@@ -2,14 +2,14 @@
 #define daemon_hpp_INCLUDED
 
 #include <sys/epoll.h>
+#include <sys/inotify.h>
 
 #include <cstdint>
 #include <filesystem>
-#include <map>
-#include <vector>
+#include <unordered_map>
 
 #include "hopper/daemon/endpoint.hpp"
-#include "hopper/daemon/event.hpp"
+#include "hopper/daemon/pipe.hpp"
 
 namespace hopper {
 
@@ -17,42 +17,46 @@ constexpr uint64_t INOTIFY_DATA = 0x1;
 
 class HopperDaemon {
 private:
-    std::map<int, HopperEndpoint *> m_endpoints;
-    std::vector<HopperEvent *> m_events;
+    std::unordered_map<uint32_t, HopperEndpoint *> m_endpoints;
 
-    std::filesystem::path m_path;
 
-    uint64_t m_last_event_id = 0;
-    int m_last_endpoint_id = 0;
+    // endpoint IDs are 24 bit
+    uint32_t m_last_endpoint_id = 1;
+    uint32_t next_endpoint_id() {
+        if (m_last_endpoint_id > ((1ULL << 24) - 1))
+            return 0;
+
+        return m_last_endpoint_id++;
+    }
 
     int m_inotify_fd = -1;
-    int m_inotify_watch_fd = -1;
-
+    int m_inotify_root_watch = -1;
     int m_epoll_fd = -1;
 
     int m_max_events = 64;
     int m_timeout = 250;
 
-    uint64_t next_event_id() { return m_last_event_id++; }
-    int next_endpoint_id() { return m_last_endpoint_id++; }
+    std::filesystem::path m_path;
 
-    int create_endpoint(std::filesystem::path path);
-    int delete_endpoint(std::filesystem::path path);
-    int delete_endpoint(int id);
+    uint32_t create_endpoint(const std::filesystem::path &path);
+    void delete_endpoint(const std::filesystem::path &path);
+    void delete_endpoint(uint32_t id);
 
-    int handle_inotify(HopperEvent *ev);
+    HopperEndpoint *endpoint_by_watch(int watch);
+    void setup_inotify();
+    void handle_inotify();
+    void handle_root_inotify(struct inotify_event *ev);
+    void handle_endpoint_inotify(struct inotify_event *ev, HopperEndpoint *endpoint);
 
+    void process_events(struct epoll_event *events, int n_events);
+    void try_add_pipe(std::pair<uint64_t, int> pipe, PipeType type);
+    void refresh_pipes();
 public:
     HopperDaemon(std::filesystem::path path, int max_events = 64,
                  int m_timeout = 250);
     ~HopperDaemon();
 
     int run();
-
-    int add_event(HopperEvent *event, int events = EPOLLIN);
-    int remove_event(uint64_t id);
-    int remove_event(HopperEvent *event);
-    HopperEvent *get_event(uint64_t id);
 };
 
 }; // namespace hopper
