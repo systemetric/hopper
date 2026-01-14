@@ -8,7 +8,6 @@
 
 #include "hopper/daemon/daemon.hpp"
 #include "hopper/daemon/endpoint.hpp"
-#include "hopper/daemon/pipe.hpp"
 #include "hopper/daemon/util.hpp"
 
 namespace hopper {
@@ -34,53 +33,6 @@ HopperDaemon::~HopperDaemon() {
         delete endpoint;
 }
 
-void HopperDaemon::remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id) {
-    PipeType type = (pipe_id & 0x1 ? PipeType::IN : PipeType::OUT);
-    for (const auto &[id, pipe] :
-         (type == PipeType::IN ? endpoint->inputs() : endpoint->outputs())) {
-        if (epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, pipe->fd(), nullptr) != 0)
-            throw_errno("epoll_ctl DEL");
-        pipe->close_pipe();
-
-        std::cout << "DOWN " << pipe->name() << "(" << endpoint->name()
-                  << ")\n";
-    }
-}
-
-void HopperDaemon::add_pipe(HopperEndpoint *endpoint, HopperPipe *pipe) {
-    if (pipe == nullptr)
-        return;
-
-    // Pipe has bad ID or bad FD
-    if (pipe->id() == 0 || pipe->fd() == -1)
-        return;
-
-    struct epoll_event ev = {};
-    ev.events = (pipe->type() == PipeType::IN ? EPOLLIN | EPOLLHUP : EPOLLHUP);
-    ev.data.u64 = pipe->id();
-
-    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, pipe->fd(), &ev) != 0)
-        throw_errno("epoll_ctl ADD");
-
-    std::cout << "UP " << pipe->name() << "(" << endpoint->name() << ")\n";
-}
-
-void HopperDaemon::refresh_pipes() {
-    // Try to open any inactive pipes again
-    for (const auto &[_, endpoint] : m_endpoints) {
-        for (const auto &[id, pipe] : endpoint->inputs()) {
-            if (pipe->status() == PipeStatus::ACTIVE || !pipe->open_pipe())
-                continue;
-            add_pipe(endpoint, pipe);
-        }
-        for (const auto &[id, pipe] : endpoint->outputs()) {
-            if (pipe->status() == PipeStatus::ACTIVE || !pipe->open_pipe())
-                continue;
-            add_pipe(endpoint, pipe);
-        }
-    }
-}
-
 void HopperDaemon::process_events(struct epoll_event *events, int n_events) {
     for (int i = 0; i < n_events; i++) {
         struct epoll_event ev = events[i];
@@ -99,7 +51,7 @@ void HopperDaemon::process_events(struct epoll_event *events, int n_events) {
 
         if (ev.events & EPOLLIN)
             endpoint->on_pipe_readable(ev.data.u64);
-        if (ev.events & EPOLLHUP)
+        if (ev.events & EPOLLHUP || ev.events & EPOLLERR)
             remove_pipe(endpoint, ev.data.u64);
     }
 }

@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <cstring>
 
 #include "hopper/daemon/buffer.hpp"
+#include "hopper/daemon/marker.hpp"
 #include "hopper/daemon/pipe.hpp"
 
 namespace hopper {
@@ -22,13 +24,19 @@ BufferMarker *HopperBuffer::create_marker() {
     return m;
 }
 
+void HopperBuffer::delete_marker(BufferMarker *marker) {
+    auto tgt = std::find(m_markers.begin(), m_markers.end(), marker);
+    if (tgt != m_markers.end())
+        m_markers.erase(tgt);
+}
+
 size_t HopperBuffer::write(void *src, size_t len) {
     size_t max_len = std::min(len, max_write());
     size_t done_len = 0;
 
     // Write up to the buffer length, but only if len > buf_len
     size_t next_len = std::min((m_buf.size() - m_edge), max_len);
-    std::memcpy(src, &m_buf[m_edge], next_len);
+    std::memcpy(&m_buf[m_edge], src, next_len);
     m_edge = (m_edge + next_len) % m_buf.size();
 
     // Enough bytes have been written, return
@@ -38,7 +46,7 @@ size_t HopperBuffer::write(void *src, size_t len) {
 
     // We are guaranteed tp have space for whatever's left
     next_len = max_len - next_len;
-    std::memcpy(reinterpret_cast<char *>(src) + done_len, &m_buf[m_edge],
+    std::memcpy(&m_buf[m_edge], reinterpret_cast<char *>(src) + done_len,
                 next_len);
     m_edge = (m_edge + next_len) % m_buf.size();
 
@@ -80,7 +88,7 @@ size_t HopperBuffer::read(BufferMarker *m, void *dst, size_t len) {
     size_t done_len = 0;
 
     size_t next_len = std::min((m_buf.size() - m->pos()), max_len);
-    std::memcpy(&m_buf[m->pos()], dst, next_len);
+    std::memcpy(dst, &m_buf[m->pos()], next_len);
     m->seek(next_len, m_buf.size(), SeekDirection::FORWARD);
 
     done_len += next_len;
@@ -88,7 +96,7 @@ size_t HopperBuffer::read(BufferMarker *m, void *dst, size_t len) {
         return done_len;
 
     next_len = max_len - next_len;
-    std::memcpy(&m_buf[m->pos()], reinterpret_cast<char *>(dst) + done_len,
+    std::memcpy(reinterpret_cast<char *>(dst) + done_len, &m_buf[m->pos()],
                 next_len);
     m->seek(next_len, m_buf.size(), SeekDirection::FORWARD);
 
@@ -96,23 +104,54 @@ size_t HopperBuffer::read(BufferMarker *m, void *dst, size_t len) {
     return done_len;
 }
 
+size_t HopperBuffer::read(HopperPipe *pipe) {
+    BufferMarker *m = pipe->marker();
+    size_t max_len = max_read(m);
+    size_t done_len = 0;
+
+    size_t next_len = std::min((m_buf.size() - m->pos()), max_len);
+    size_t res = pipe->write_pipe(&m_buf[m->pos()], next_len);
+    if (res == (size_t)-1)
+        return -1;
+
+    m->seek(res, m_buf.size(), SeekDirection::FORWARD);
+    done_len += res;
+    if (res <= next_len)
+        return done_len;
+
+    next_len = max_len - next_len;
+    res = pipe->write_pipe(&m_buf[m->pos()], next_len);
+    if (res == (size_t)-1)
+        return -1;
+
+    m->seek(res, m_buf.size(), SeekDirection::FORWARD);
+    done_len += res;
+    return done_len;
+}
+
 size_t HopperBuffer::max_write() {
+    size_t cap = m_buf.size();
     if (m_markers.empty())
-        return m_buf.size();
+        return cap;
 
-    size_t min_pos = m_edge;
+    size_t min_dist = cap;
 
-    for (auto *m : m_markers)
-        if (m->pos() < min_pos)
-            min_pos = m->pos();
+    for (auto *m : m_markers) {
+        size_t d = (m->pos() + cap - m_edge) % cap;
 
-    return ((m_edge <= min_pos) ? min_pos - m_edge
-                                : (m_buf.size() - m_edge) + min_pos);
+        if (d == 0) // Marker is at m_edge, full buffer left
+            d = cap;
+
+        if (d < min_dist)
+            min_dist = d;
+    }
+
+    return min_dist;
 }
 
 size_t HopperBuffer::max_read(BufferMarker *m) {
-    return ((m->pos() <= m_edge) ? m_edge - m->pos()
-                                 : (m_buf.size() - m->pos()) + m_edge);
+    size_t cap = m_buf.size();
+    return (m_edge + cap - m->pos()) % cap;
 }
 
 }; // namespace hopper

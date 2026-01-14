@@ -64,6 +64,17 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
         if (pipe != nullptr)
             add_pipe(endpoint, pipe);
     }
+
+    if (ev->mask & IN_DELETE) {
+        std::filesystem::path p = endpoint->path();
+        p /= ev->name;
+
+        HopperPipe *pipe = endpoint->pipe_by_path(p);
+        if (pipe != nullptr && pipe->status() == PipeStatus::ACTIVE)
+            remove_pipe(endpoint, pipe->id());
+
+        endpoint->remove_by_id(pipe->id());
+    }
 }
 
 void HopperDaemon::handle_inotify() {

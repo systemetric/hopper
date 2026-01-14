@@ -42,11 +42,15 @@ public:
     ~HopperEndpoint();
 
     void on_pipe_readable(uint64_t id);
+    void flush_pipes();
 
     HopperPipe *add_input_pipe(const std::filesystem::path &path);
     HopperPipe *add_output_pipe(const std::filesystem::path &path);
+    void remove_by_id(uint64_t pipe_id);
     void remove_input_pipe(const std::filesystem::path &path);
     void remove_output_pipe(const std::filesystem::path &path);
+
+    HopperPipe *pipe_by_path(const std::filesystem::path &path);
 
     const std::filesystem::path &path() { return m_path; }
     const std::string &name() { return m_name; }
