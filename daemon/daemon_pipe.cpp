@@ -16,12 +16,11 @@ void HopperDaemon::remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id) {
             throw_errno("epoll_ctl DEL");
         pipe->close_pipe();
 
-        std::cout << "DOWN " << pipe->name() << "(" << endpoint->name()
-                  << ")\n";
+        std::cout << "DOWN " << *pipe << "\n";
     }
 }
 
-void HopperDaemon::add_pipe(HopperEndpoint *endpoint, HopperPipe *pipe) {
+void HopperDaemon::add_pipe(HopperPipe *pipe) {
     if (pipe == nullptr)
         return;
 
@@ -37,7 +36,7 @@ void HopperDaemon::add_pipe(HopperEndpoint *endpoint, HopperPipe *pipe) {
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, pipe->fd(), &ev) != 0)
         throw_errno("epoll_ctl ADD");
 
-    std::cout << "UP " << pipe->name() << "(" << endpoint->name() << ")\n";
+    std::cout << "UP " << *pipe << "\n";
 }
 
 void HopperDaemon::refresh_pipes() {
@@ -46,12 +45,12 @@ void HopperDaemon::refresh_pipes() {
         for (const auto &[id, pipe] : endpoint->inputs()) {
             if (pipe->status() == PipeStatus::ACTIVE || !pipe->open_pipe())
                 continue;
-            add_pipe(endpoint, pipe);
+            add_pipe(pipe);
         }
         for (const auto &[id, pipe] : endpoint->outputs()) {
             if (pipe->status() == PipeStatus::ACTIVE || !pipe->open_pipe())
                 continue;
-            add_pipe(endpoint, pipe);
+            add_pipe(pipe);
         }
 
         // Try to empty buffers into pipes

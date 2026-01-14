@@ -59,9 +59,6 @@ void HopperDaemon::process_events(struct epoll_event *events, int n_events) {
 int HopperDaemon::run() {
     int res = 0;
 
-    std::cout << "Started event loop, max " << m_max_events
-              << " events, timeout " << m_timeout << " ms" << std::endl;
-
     while (res == 0) {
         struct epoll_event *events = new struct epoll_event[m_max_events];
 

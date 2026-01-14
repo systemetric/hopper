@@ -17,7 +17,7 @@ uint32_t HopperDaemon::create_endpoint(const std::filesystem::path &path) {
     auto *endpoint = new HopperEndpoint(endpoint_id, inotify_watch_fd, path);
     m_endpoints[endpoint_id] = endpoint;
 
-    std::cout << "CREATE " << endpoint->path() << std::endl;
+    std::cout << "CREATE " << *endpoint << std::endl;
 
     return endpoint_id;
 }
@@ -26,7 +26,7 @@ void HopperDaemon::delete_endpoint(uint32_t id) {
     if (!m_endpoints.contains(id))
         return;
 
-    std::cout << "DELETE " << m_endpoints[id]->path() << std::endl;
+    std::cout << "DELETE " << *(m_endpoints[id]) << std::endl;
 
     delete m_endpoints[id];
     m_endpoints.erase(id);

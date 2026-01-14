@@ -62,7 +62,7 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
                                        : endpoint->add_output_pipe(p));
 
         if (pipe != nullptr)
-            add_pipe(endpoint, pipe);
+            add_pipe(pipe);
     }
 
     if (ev->mask & IN_DELETE) {

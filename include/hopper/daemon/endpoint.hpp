@@ -62,6 +62,12 @@ public:
     }
     int id() { return m_id; }
     int watch_fd() { return m_watch_fd; }
+
+    friend std::ostream &operator<<(std::ostream &os,
+                                    HopperEndpoint &endpoint) {
+        os << endpoint.m_name << "(" << endpoint.m_id << ")";
+        return os;
+    }
 };
 
 }; // namespace hopper

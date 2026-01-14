@@ -21,7 +21,7 @@ public:
     HopperBuffer(size_t len = 1024 * 1024)
         : m_buf(len) {} // Use 1 MiB size by default
 
-    BufferMarker* create_marker();
+    BufferMarker *create_marker();
     void delete_marker(BufferMarker *marker);
 
     size_t write(void *src, size_t len);

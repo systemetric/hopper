@@ -19,7 +19,6 @@ class HopperDaemon {
 private:
     std::unordered_map<uint32_t, HopperEndpoint *> m_endpoints;
 
-
     // endpoint IDs are 24 bit
     uint32_t m_last_endpoint_id = 1;
     uint32_t next_endpoint_id() {
@@ -46,12 +45,14 @@ private:
     void setup_inotify();
     void handle_inotify();
     void handle_root_inotify(struct inotify_event *ev);
-    void handle_endpoint_inotify(struct inotify_event *ev, HopperEndpoint *endpoint);
+    void handle_endpoint_inotify(struct inotify_event *ev,
+                                 HopperEndpoint *endpoint);
 
     void process_events(struct epoll_event *events, int n_events);
     void remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id);
-    void add_pipe(HopperEndpoint *endpoint, HopperPipe *pipe);
+    void add_pipe(HopperPipe *pipe);
     void refresh_pipes();
+
 public:
     HopperDaemon(std::filesystem::path path, int max_events = 64,
                  int m_timeout = 250);

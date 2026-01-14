@@ -30,7 +30,7 @@ void HopperEndpoint::on_pipe_readable(uint64_t id) {
     if (res == (size_t)-1)
         throw_errno("read");
 
-    std::cout << pipe->name() << "(" << m_name << ") -> " << res << " bytes\n";
+    std::cout << *pipe << " -> " << res << " bytes\n";
 }
 
 void HopperEndpoint::flush_pipes() {
@@ -38,7 +38,9 @@ void HopperEndpoint::flush_pipes() {
         if (pipe->status() == PipeStatus::INACTIVE)
             continue;
 
-        m_buffer.read(pipe);
+        size_t res = m_buffer.read(pipe);
+        if (res > 0)
+            std::cout << *pipe << " <- " << res << " bytes\n";
     }
 }
 
@@ -61,10 +63,10 @@ HopperPipe *HopperEndpoint::add_input_pipe(const std::filesystem::path &path) {
     if (id == 0)                   // ID 0 is never valid
         return nullptr;
 
-    std::cout << "OPEN IN " << path << "\n";
-
-    HopperPipe *p = new HopperPipe(id, PipeType::IN, path, nullptr);
+    HopperPipe *p = new HopperPipe(id, m_name, PipeType::IN, path, nullptr);
     m_inputs[id] = p;
+
+    std::cout << "OPEN " << *p << "\n";
 
     return p;
 }
@@ -78,10 +80,10 @@ HopperPipe *HopperEndpoint::add_output_pipe(const std::filesystem::path &path) {
     if (id == 0)
         return nullptr;
 
-    std::cout << "OPEN OUT " << path << "\n";
-
-    HopperPipe *p = new HopperPipe(id, PipeType::OUT, path, marker);
+    HopperPipe *p = new HopperPipe(id, m_name, PipeType::OUT, path, marker);
     m_outputs[id] = p;
+
+    std::cout << "OPEN " << *p << "\n";
 
     return p;
 }
@@ -92,15 +94,15 @@ void HopperEndpoint::remove_by_id(uint64_t pipe_id) {
     if (type == PipeType::IN && m_inputs.contains(pipe_id)) {
         HopperPipe *pipe = m_inputs[pipe_id];
         m_buffer.delete_marker(pipe->marker());
-        std::cout << "CLOSE IN " << pipe->path() << "\n";
-        
+        std::cout << "CLOSE " << *pipe << "\n";
+
         delete pipe;
         m_inputs.erase(pipe_id);
     } else if (type == PipeType::OUT && m_outputs.contains(pipe_id)) {
         HopperPipe *pipe = m_outputs[pipe_id];
         m_buffer.delete_marker(pipe->marker());
-        std::cout << "CLOSE OUT " << pipe->path() << "\n";
-        
+        std::cout << "CLOSE " << *pipe << "\n";
+
         delete pipe;
         m_outputs.erase(pipe_id);
     }

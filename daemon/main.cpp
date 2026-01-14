@@ -10,11 +10,11 @@ int main(int argc, char *argv[]) {
             std::cout << "Usage: hopperd <hopper path>" << std::endl;
             return 1;
         } else if (argc == 2) {
-            std::cout << "Using Hopper at " << argv[1] << std::endl;
+            std::cout << "HOPPER " << argv[1] << std::endl;
             auto daemon = hopper::HopperDaemon(argv[1]);
             return daemon.run();
         } else if (char *p = getenv("HOPPER_PATH")) {
-            std::cout << "Using Hopper at " << p << std::endl;
+            std::cout << "HOPPER " << p << std::endl;
             auto daemon = hopper::HopperDaemon(p);
             return daemon.run();
         } else {
