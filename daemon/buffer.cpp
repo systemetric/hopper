@@ -137,7 +137,7 @@ size_t HopperBuffer::max_write() {
     size_t min_dist = cap;
 
     for (auto *m : m_markers) {
-        size_t d = (m->pos() + cap - m_edge) % cap;
+        size_t d = (m->pos() - m_edge + cap) % cap;
 
         if (d == 0) // Marker is at m_edge, full buffer left
             d = cap;
@@ -151,7 +151,7 @@ size_t HopperBuffer::max_write() {
 
 size_t HopperBuffer::max_read(BufferMarker *m) {
     size_t cap = m_buf.size();
-    return (m_edge + cap - m->pos()) % cap;
+    return (m_edge - m->pos() + cap) % cap;
 }
 
 }; // namespace hopper

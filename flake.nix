@@ -43,6 +43,10 @@
             meson
             ninja
             pkg-config
+
+            # one probably wants these too
+            gdb
+            valgrind
           ];
         };
       }

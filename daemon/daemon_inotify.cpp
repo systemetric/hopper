@@ -70,10 +70,13 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
         p /= ev->name;
 
         HopperPipe *pipe = endpoint->pipe_by_path(p);
-        if (pipe != nullptr && pipe->status() == PipeStatus::ACTIVE)
-            remove_pipe(endpoint, pipe->id());
 
-        endpoint->remove_by_id(pipe->id());
+        if (pipe != nullptr) {
+            if (pipe->status() == PipeStatus::ACTIVE)
+                remove_pipe(endpoint, pipe->id());
+
+            endpoint->remove_by_id(pipe->id());
+        }
     }
 }
 
