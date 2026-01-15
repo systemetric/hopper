@@ -9,7 +9,7 @@
 
 #include "hopper/hopper.h"
 
-int get_open_flags(int flags) {
+static int get_open_flags(int flags) {
     int open_flags = 0;
 
     if (flags & HOPPER_IN)
@@ -22,7 +22,7 @@ int get_open_flags(int flags) {
     return open_flags;
 }
 
-char *get_pipe_path(struct hopper_pipe *pipe) {
+static char *get_pipe_path(struct hopper_pipe *pipe) {
     char *path = (char *)malloc(sizeof(char) * PATH_MAX);
     const char *suffix = (pipe->flags & HOPPER_IN ? "in" : "out");
 
