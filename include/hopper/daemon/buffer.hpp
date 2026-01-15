@@ -1,6 +1,7 @@
 #ifndef buffer_hpp_INCLUDED
 #define buffer_hpp_INCLUDED
 
+#include <cstddef>
 #include <vector>
 
 #include "hopper/daemon/marker.hpp"
@@ -12,14 +13,13 @@ class HopperPipe;
 
 class HopperBuffer {
 private:
-    std::vector<char> m_buf;
+    std::vector<std::byte> m_buf;
     std::vector<BufferMarker *> m_markers;
 
     size_t m_edge;
 
 public:
-    HopperBuffer(size_t len = 1024 * 1024)
-        : m_buf(len) {} // Use 1 MiB size by default
+    HopperBuffer(size_t len = 1024 * 1024); // Use 1 MiB size by default
 
     BufferMarker *create_marker();
     void delete_marker(BufferMarker *marker);

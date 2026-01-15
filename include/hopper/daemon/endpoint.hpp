@@ -13,7 +13,7 @@ private:
     std::unordered_map<uint64_t, HopperPipe *> m_inputs;
     std::unordered_map<uint64_t, HopperPipe *> m_outputs;
 
-    HopperBuffer m_buffer;
+    HopperBuffer m_buffer{};
 
     uint64_t m_last_pipe_id = 1;
     uint64_t next_pipe_id(uint8_t type) {

@@ -59,20 +59,21 @@ void HopperDaemon::process_events(struct epoll_event *events, int n_events) {
 int HopperDaemon::run() {
     int res = 0;
 
-    while (res == 0) {
-        struct epoll_event *events = new struct epoll_event[m_max_events];
+    std::unique_ptr<struct epoll_event[]> events(
+        new struct epoll_event[m_max_events]);
 
-        int n = epoll_wait(m_epoll_fd, events, m_max_events, m_timeout);
+    while (res == 0) {
+
+        int n = epoll_wait(m_epoll_fd, events.get(), m_max_events, m_timeout);
         if (n < 0) {
             if (errno == EINTR)
                 continue;
 
-            delete[] events;
             throw_errno("epoll_wait");
             return -1;
         }
 
-        process_events(events, n);
+        process_events(events.get(), n);
         refresh_pipes();
     }
 
