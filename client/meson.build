@@ -2,7 +2,7 @@ client_inc = include_directories('.', '../include')
 
 libhopper = library(
     'hopper',
-    'lib.cpp',
+    'lib.c',
     include_directories: client_inc,
     version: meson.project_version(),
     install: true,
