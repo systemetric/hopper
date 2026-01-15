@@ -71,7 +71,7 @@ size_t HopperPipe::write_pipe(void *src, size_t len) {
         ssize_t res = write(m_fd, reinterpret_cast<char *>(src) + done_len,
                             len - done_len);
 
-        if (res == -1 && (errno == EAGAIN || errno == EINTR))
+        if (res == -1 && (errno == EWOULDBLOCK || errno == EINTR))
             return done_len;
         else if (res == -1) {
             perror("write");
@@ -97,7 +97,7 @@ size_t HopperPipe::read_pipe(void *dst, size_t len) {
         ssize_t res = read(m_fd, reinterpret_cast<char *>(dst) + done_len,
                            len - done_len);
 
-        if (res == -1 && (errno == EAGAIN || errno == EINTR))
+        if (res == -1 && (errno == EWOULDBLOCK || errno == EINTR))
             return done_len;
         else if (res == -1) {
             perror("read");
