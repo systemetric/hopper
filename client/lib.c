@@ -61,8 +61,8 @@ int hopper_open(struct hopper_pipe *pipe) {
     }
 
     char *pipe_path = get_pipe_path(pipe);
-    if (mknod(pipe_path, S_IFIFO | 0660, 0) < 0 && errno != EEXIST) {
-        // mknod failed in some way, preserve errno
+    if (mkfifo(pipe_path, 0660) < 0 && errno != EEXIST) {
+        // mkfifo failed in some way, preserve errno
         res = -1;
         goto cleanup;
     }
