@@ -81,8 +81,11 @@ int hopper_open(struct hopper_pipe *pipe) {
         if (errno == EWOULDBLOCK)
             errno = EBUSY; // this makes more sense for clients
 
-        res = -1;
+        int errsv = errno; // preserve errno across close
         close(fd);
+        errno = errsv;
+
+        res = -1;
         goto cleanup;
     }
 
