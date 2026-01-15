@@ -1,10 +1,10 @@
 client_inc = include_directories('.', '../include')
 
-libhopper = library(
+libhopper = static_library(
     'hopper',
     'lib.c',
     include_directories: client_inc,
-    version: meson.project_version(),
+    pic: true,
     install: true,
 )
 
@@ -14,6 +14,7 @@ pkg.generate(
     libhopper,
     name: 'hopper',
     description: 'Hopper client library',
+    version: meson.project_version(),
     subdirs: 'hopper',
 )
 
