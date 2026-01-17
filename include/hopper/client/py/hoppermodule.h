@@ -5,7 +5,7 @@
 #include <Python.h>
 
 // clang-format off
-struct _hopper_pipe {
+struct py_hopper_pipe {
     PyObject_HEAD
     PyObject *name;
     PyObject *endpoint;
@@ -17,13 +17,13 @@ struct _hopper_pipe {
 
 // These macros are horrible, but hard to replace :(
 #define Hopper_Pipe_GET(field)                                                 \
-    static PyObject *_hopper_pipe_get##field(struct _hopper_pipe *self,        \
+    static PyObject *_hopper_pipe_get##field(struct py_hopper_pipe *self,      \
                                              void *closure) {                  \
         return Py_NewRef(self->field);                                         \
     }
 
 #define Hopper_Pipe_SETSTR(field)                                              \
-    static int _hopper_pipe_set##field(struct _hopper_pipe *self,              \
+    static int _hopper_pipe_set##field(struct py_hopper_pipe *self,            \
                                        PyObject *value, void *closure) {       \
         if (!value) {                                                          \
             PyErr_SetString(PyExc_TypeError, "cannot delete " #field);         \
