@@ -1,4 +1,4 @@
-{ stdenv, meson, ninja, pkg-config }:
+{ stdenv, meson, ninja, pkg-config, python313 }:
 
 stdenv.mkDerivation {
   name = "hopper";
@@ -9,5 +9,6 @@ stdenv.mkDerivation {
     meson
     ninja
     pkg-config
+    python313
   ];
 }

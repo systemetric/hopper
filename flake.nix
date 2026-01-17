@@ -44,6 +44,8 @@
             ninja
             pkg-config
 
+            python313
+
             # one probably wants these too
             gdb
             valgrind
