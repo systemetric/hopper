@@ -16,10 +16,8 @@ struct hopper_pipe {
     int flags;
 };
 
-/// Open a new Hopper pipe specified by `pipe`.
-/// Hopper location will be determined from the `HOPPER_PATH` environment
-/// variable, or can be overridden with the `hopper_pipe.hopper` string.
-/// -1 is returned on error, and errno is set.
+/// Open a new Hopper pipe specified by `pipe`. -1 is returned on error, and
+/// errno is set.
 int hopper_open(struct hopper_pipe *pipe);
 
 /// Close a Hopper pipe previously opened by `hopper_open_pipe`.

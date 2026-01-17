@@ -36,8 +36,8 @@ static char *get_pipe_path(struct hopper_pipe *pipe) {
 int hopper_open(struct hopper_pipe *pipe) {
     int res = 0;
 
-    if (pipe->name == NULL || pipe->endpoint == NULL) {
-        // pipe and endpoint name are (obviously) required
+    if (pipe->name == NULL || pipe->endpoint == NULL || pipe->hopper == NULL) {
+        // pipe, endpoint name, hopper path are (obviously) required
         errno = EINVAL;
         return -1;
     }
@@ -47,17 +47,6 @@ int hopper_open(struct hopper_pipe *pipe) {
         // either both or none of the input/output flags are set
         errno = EINVAL;
         return -1;
-    }
-
-    if (pipe->hopper == NULL) {
-        // hopper path isn't overridden, get from environment
-        pipe->hopper = getenv("HOPPER_PATH");
-
-        if (pipe->hopper == NULL) {
-            // still don't have a valid path, can't open pipe
-            errno = ENOENT;
-            return -1;
-        }
     }
 
     char *pipe_path = get_pipe_path(pipe);
