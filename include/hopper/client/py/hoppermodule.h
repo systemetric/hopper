@@ -40,4 +40,19 @@ struct py_hopper_pipe {
         return 0;                                                              \
     }
 
+#define Hopper_Pipe_CONVERT(in, out)                                           \
+    struct py_hopper_pipe *_self = (struct py_hopper_pipe *)in;                \
+                                                                               \
+    const char *name = PyUnicode_AsUTF8(_self->name);                          \
+    const char *endpoint = PyUnicode_AsUTF8(_self->endpoint);                  \
+    const char *hopper = PyUnicode_AsUTF8(_self->hopper);                      \
+                                                                               \
+    struct hopper_pipe out = {                                                 \
+        .name = name,                                                          \
+        .endpoint = endpoint,                                                  \
+        .hopper = hopper,                                                      \
+        .fd = _self->fd,                                                       \
+        .flags = _self->flags,                                                 \
+    };
+
 #endif // hoppermodule_h_INCLUDED

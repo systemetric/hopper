@@ -74,7 +74,13 @@ static void hopper_pipe_dealloc(struct py_hopper_pipe *self) {
 }
 
 static PyObject *hopper_pipe_open(PyObject *self, PyObject *args) {}
-static PyObject *hopper_pipe_close(PyObject *self, PyObject *args) {}
+
+static PyObject *hopper_pipe_close(PyObject *self, PyObject *args) {
+    Hopper_Pipe_CONVERT(self, pipe);
+    hopper_close(&pipe);
+    Py_RETURN_NONE;
+}
+
 static PyObject *hopper_pipe_read(PyObject *self, PyObject *args) {}
 static PyObject *hopper_pipe_write(PyObject *self, PyObject *args) {}
 

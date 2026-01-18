@@ -7,6 +7,7 @@ py.extension_module(
     'hoppermodule.c',
     c_args: ['-Wno-unused-parameter', '-Wno-pedantic'],
     include_directories: client_inc,
+    link_with: libhopper,
     install: true,
 )
 
