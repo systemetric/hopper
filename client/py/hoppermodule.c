@@ -6,6 +6,9 @@
 #include "hopper/hopper.h"
 #include "hoppermodule.h"
 
+// define error type for hopper things
+static PyObject *HopperError = NULL;
+
 // clang-format off
 Hopper_Pipe_GET(name)
 Hopper_Pipe_GET(endpoint)
@@ -77,7 +80,11 @@ static PyObject *hopper_pipe_open(PyObject *self, PyObject *args) {}
 
 static PyObject *hopper_pipe_close(PyObject *self, PyObject *args) {
     Hopper_Pipe_CONVERT(self, pipe);
-    hopper_close(&pipe);
+
+    int res = hopper_close(&pipe);
+    if (res != 0)
+        return PyErr_SetFromErrno(HopperError);
+
     Hopper_Pipe_UPDATE(pipe, self);
     Py_RETURN_NONE;
 }
@@ -129,6 +136,17 @@ static PyTypeObject hopper_pipe_type = {
 // clang-format on
 
 static int hopper_module_exec(PyObject *m) {
+    if (HopperError != NULL) {
+        PyErr_SetString(PyExc_ImportError,
+                        "cannot initialize hopper module multiple times");
+        return -1;
+    }
+
+    HopperError = PyErr_NewException("hopper.error", NULL, NULL);
+
+    if (PyModule_AddObjectRef(m, "HopperError", HopperError) < 0)
+        return -1;
+
     if (PyType_Ready(&hopper_pipe_type) < 0)
         return -1;
 
