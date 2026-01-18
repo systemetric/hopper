@@ -55,4 +55,9 @@ struct py_hopper_pipe {
         .flags = _self->flags,                                                 \
     };
 
+#define Hopper_Pipe_UPDATE(in, out)                                            \
+    struct py_hopper_pipe *_out = (struct py_hopper_pipe *)out;                \
+    _out->fd = in.fd;                                                          \
+    _out->flags = in.flags;
+
 #endif // hoppermodule_h_INCLUDED

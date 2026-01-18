@@ -53,11 +53,11 @@ static int hopper_pipe_init(struct py_hopper_pipe *self, PyObject *args,
 
     // After parsing, copy the provided value into the struct
     if (name)
-        Py_SETREF(self->name, name);
+        Py_SETREF(self->name, Py_NewRef(name));
     if (endpoint)
-        Py_SETREF(self->endpoint, endpoint);
+        Py_SETREF(self->endpoint, Py_NewRef(endpoint));
     if (hopper)
-        Py_SETREF(self->hopper, hopper);
+        Py_SETREF(self->hopper, Py_NewRef(hopper));
 
     return 0;
 }
@@ -78,6 +78,7 @@ static PyObject *hopper_pipe_open(PyObject *self, PyObject *args) {}
 static PyObject *hopper_pipe_close(PyObject *self, PyObject *args) {
     Hopper_Pipe_CONVERT(self, pipe);
     hopper_close(&pipe);
+    Hopper_Pipe_UPDATE(pipe, self);
     Py_RETURN_NONE;
 }
 
@@ -99,6 +100,7 @@ static PyGetSetDef hopper_pipe_get_set[] = {
      (setter)_hopper_pipe_setendpoint, "pipe endpoint", NULL},
     {"hopper", (getter)_hopper_pipe_gethopper, (setter)_hopper_pipe_sethopper,
      "pipe hopper", NULL},
+    {NULL},
 };
 
 static PyMethodDef hopper_pipe_methods[] = {
