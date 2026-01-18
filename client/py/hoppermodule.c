@@ -177,8 +177,8 @@ static PyGetSetDef hopper_pipe_get_set[] = {
 static PyMethodDef hopper_pipe_methods[] = {
     {"open", hopper_pipe_open, METH_VARARGS, "open a Hopper pipe"},
     {"close", hopper_pipe_close, METH_VARARGS, "close a Hopper pipe"},
-    {"read", hopper_pipe_read, METH_VARARGS, ""},
-    {"write", hopper_pipe_write, METH_VARARGS, ""},
+    {"read", hopper_pipe_read, METH_VARARGS, "read bytes from a Hopper pipe"},
+    {"write", hopper_pipe_write, METH_VARARGS, "write bytes to a Hopper pipe"},
     {NULL, NULL, 0, NULL},
 };
 
