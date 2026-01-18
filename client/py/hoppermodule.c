@@ -81,6 +81,7 @@ static PyObject *hopper_pipe_open(PyObject *self, PyObject *args) {
 
     int res = hopper_open(&pipe);
     if (res != 0) {
+        Hopper_Pipe_UPDATE(pipe, self);
         return PyErr_SetFromErrno(HopperError);
     }
 
@@ -92,14 +93,46 @@ static PyObject *hopper_pipe_close(PyObject *self, PyObject *args) {
     Hopper_Pipe_CONVERT(self, pipe);
 
     int res = hopper_close(&pipe);
-    if (res != 0)
+    if (res != 0) {
+        Hopper_Pipe_UPDATE(pipe, self);
         return PyErr_SetFromErrno(HopperError);
+    }
 
     Hopper_Pipe_UPDATE(pipe, self);
     Py_RETURN_NONE;
 }
 
-static PyObject *hopper_pipe_read(PyObject *self, PyObject *args) {}
+static PyObject *hopper_pipe_read(PyObject *self, PyObject *args) {
+    Py_ssize_t len;
+    if (!PyArg_ParseTuple(args, "n", &len))
+        return NULL;
+
+    PyObject *_dst = PyByteArray_FromStringAndSize(NULL, len);
+    if (!_dst)
+        return NULL;
+
+    char *dst = PyByteArray_AS_STRING(_dst);
+
+    Hopper_Pipe_CONVERT(self, pipe);
+
+    ssize_t res = hopper_read(&pipe, (void *)dst, (size_t)len);
+    if (res < 0) {
+        Py_DECREF(_dst);
+        Hopper_Pipe_UPDATE(pipe, self);
+        return PyErr_SetFromErrno(HopperError);
+    }
+
+    if (res < len) {
+        if (PyByteArray_Resize(_dst, (Py_ssize_t)res) < 0) {
+            Py_DECREF(_dst);
+            Hopper_Pipe_UPDATE(pipe, self);
+            return NULL;
+        }
+    }
+
+    Hopper_Pipe_UPDATE(pipe, self);
+    return _dst;
+}
 
 static PyObject *hopper_pipe_write(PyObject *self, PyObject *args) {
     PyObject *_src = NULL;
@@ -114,8 +147,10 @@ static PyObject *hopper_pipe_write(PyObject *self, PyObject *args) {
     Hopper_Pipe_CONVERT(self, pipe);
 
     ssize_t res = hopper_write(&pipe, (void *)src, (size_t)len);
-    if (res < 0)
+    if (res < 0) {
+        Hopper_Pipe_UPDATE(pipe, self);
         return PyErr_SetFromErrno(HopperError);
+    }
 
     Hopper_Pipe_UPDATE(pipe, self);
     return PyLong_FromSsize_t((Py_ssize_t)res);
