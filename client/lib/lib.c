@@ -88,14 +88,19 @@ cleanup:
     return res;
 }
 
-void hopper_close(struct hopper_pipe *pipe) {
+int hopper_close(struct hopper_pipe *pipe) {
     if (pipe->fd == -1)
-        return;
+        return 0;
 
-    flock(pipe->fd, LOCK_UN);
-    close(pipe->fd);
+    if (flock(pipe->fd, LOCK_UN) != 0)
+        return -1;
+
+    if (close(pipe->fd) != 0)
+        return -1;
 
     pipe->fd = -1;
+
+    return 0;
 }
 
 ssize_t hopper_read(struct hopper_pipe *pipe, void *dst, size_t len) {

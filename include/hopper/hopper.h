@@ -21,7 +21,7 @@ struct hopper_pipe {
 int hopper_open(struct hopper_pipe *pipe);
 
 /// Close a Hopper pipe previously opened by `hopper_open_pipe`.
-void hopper_close(struct hopper_pipe *pipe);
+int hopper_close(struct hopper_pipe *pipe);
 
 /// Read up to `len` bytes from a Hopper pipe. Value returned indicates
 /// the number of bytes read. -1 is returned on error and errno is set.
