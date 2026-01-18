@@ -76,7 +76,17 @@ static void hopper_pipe_dealloc(struct py_hopper_pipe *self) {
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
-static PyObject *hopper_pipe_open(PyObject *self, PyObject *args) {}
+static PyObject *hopper_pipe_open(PyObject *self, PyObject *args) {
+    Hopper_Pipe_CONVERT(self, pipe);
+
+    int res = hopper_open(&pipe);
+    if (res != 0) {
+        return PyErr_SetFromErrno(HopperError);
+    }
+
+    Hopper_Pipe_UPDATE(pipe, self);
+    Py_RETURN_NONE;
+}
 
 static PyObject *hopper_pipe_close(PyObject *self, PyObject *args) {
     Hopper_Pipe_CONVERT(self, pipe);
@@ -111,8 +121,8 @@ static PyGetSetDef hopper_pipe_get_set[] = {
 };
 
 static PyMethodDef hopper_pipe_methods[] = {
-    {"open", hopper_pipe_open, METH_VARARGS, ""},
-    {"close", hopper_pipe_close, METH_VARARGS, ""},
+    {"open", hopper_pipe_open, METH_VARARGS, "open a Hopper pipe"},
+    {"close", hopper_pipe_close, METH_VARARGS, "close a Hopper pipe"},
     {"read", hopper_pipe_read, METH_VARARGS, ""},
     {"write", hopper_pipe_write, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL},
