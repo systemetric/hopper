@@ -100,7 +100,26 @@ static PyObject *hopper_pipe_close(PyObject *self, PyObject *args) {
 }
 
 static PyObject *hopper_pipe_read(PyObject *self, PyObject *args) {}
-static PyObject *hopper_pipe_write(PyObject *self, PyObject *args) {}
+
+static PyObject *hopper_pipe_write(PyObject *self, PyObject *args) {
+    PyObject *_src = NULL;
+    if (!PyArg_ParseTuple(args, "O!", &PyBytes_Type, &_src))
+        return NULL;
+
+    char *src;
+    Py_ssize_t len;
+    if (PyBytes_AsStringAndSize(_src, &src, &len) != 0)
+        return NULL;
+
+    Hopper_Pipe_CONVERT(self, pipe);
+
+    ssize_t res = hopper_write(&pipe, (void *)src, (size_t)len);
+    if (res < 0)
+        return PyErr_SetFromErrno(HopperError);
+
+    Hopper_Pipe_UPDATE(pipe, self);
+    return PyLong_FromSsize_t((Py_ssize_t)res);
+}
 
 static PyMemberDef hopper_pipe_members[] = {
     {"fd", Py_T_INT, offsetof(struct py_hopper_pipe, fd), 0,
