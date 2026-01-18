@@ -42,8 +42,7 @@ int hopper_open(struct hopper_pipe *pipe) {
         return -1;
     }
 
-    if ((pipe->flags & HOPPER_IN && pipe->flags & HOPPER_OUT) ||
-        (pipe->flags & ~HOPPER_IN && pipe->flags & ~HOPPER_OUT)) {
+    if (!(pipe->flags & HOPPER_IN) == !(pipe->flags & HOPPER_OUT)) {
         // either both or none of the input/output flags are set
         errno = EINVAL;
         return -1;
