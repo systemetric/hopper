@@ -27,13 +27,8 @@
         packages = {
           hopper = {
             default = pkgs.callPackage ./nix/package.nix { };
-
-            cross = {
-              x86_64 = pkgs.pkgsCross.gnu64.callPackage ./nix/package.nix { };
-              x86_64-static = pkgs.pkgsCross.gnu64.pkgsStatic.callPackage ./nix/package.nix { };
-              aarch64 = pkgs.pkgsCross.aarch64-multiplatform.callPackage ./nix/package.nix { };
-              aarch64-static = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic.callPackage ./nix/package.nix { };
-            };
+            cross-x86_64-linux = pkgs.pkgsCross.gnu64.pkgsStatic.callPackage ./nix/package.nix { };
+            cross-aarch64-linux = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic.callPackage ./nix/package.nix { };
           };
         };
 
