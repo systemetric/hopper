@@ -28,8 +28,11 @@ class HopperPipe:
             flags |= os.O_NONBLOCK
         return flags
 
+    def _get_endpoint_path(self):
+        return os.path.join(self.hopper, self.endpoint)
+
     def _get_path(self):
-        return os.path.join(self.hopper, self.endpoint, f"{self.name}.{str(self.type.value)}")
+        return os.path.join(self._get_endpoint_path(), f"{self.name}.{str(self.type.value)}")
 
     def open(self):
         if self.name == "" or self.endpoint == "":
@@ -41,6 +44,9 @@ class HopperPipe:
                 self.hopper = hopper
             else:
                 raise ValueError("Hopper path not set, or HOPPER_PATH not available")
+
+        endpoint_path = self._get_endpoint_path()
+        os.makedirs(endpoint_path, exist_ok=True)
 
         path = self._get_path()
 

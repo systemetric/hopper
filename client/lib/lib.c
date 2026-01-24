@@ -22,6 +22,12 @@ static int get_open_flags(int flags) {
     return open_flags;
 }
 
+static char *get_endpoint_path(struct hopper_pipe *pipe) {
+    char *path = (char *)malloc(sizeof(char) * PATH_MAX);
+    sprintf(path, "%s/%s", pipe->hopper, pipe->endpoint);
+    return path;
+}
+
 static char *get_pipe_path(struct hopper_pipe *pipe) {
     char *path = (char *)malloc(sizeof(char) * PATH_MAX);
     const char *suffix = (pipe->flags & HOPPER_IN ? "in" : "out");
@@ -45,6 +51,14 @@ int hopper_open(struct hopper_pipe *pipe) {
     if (!(pipe->flags & HOPPER_IN) == !(pipe->flags & HOPPER_OUT)) {
         // either both or none of the input/output flags are set
         errno = EINVAL;
+        return -1;
+    }
+
+    char *endpoint_path = get_endpoint_path(pipe);
+    res = mkdir(endpoint_path, 0755);
+    free(endpoint_path);
+    if (res == -1 && errno != EEXIST) {
+        pipe->fd = -1;
         return -1;
     }
 
