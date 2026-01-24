@@ -1,4 +1,6 @@
 #include "hopper/daemon/daemon.hpp"
+#include "hopper/daemon/util.hpp"
+#include <filesystem>
 #include <iostream>
 
 namespace hopper {
@@ -18,6 +20,22 @@ uint32_t HopperDaemon::create_endpoint(const std::filesystem::path &path) {
     m_endpoints[endpoint_id] = endpoint;
 
     std::cout << "CREATE " << *endpoint << std::endl;
+
+    // Open anything that may already exist in the endpoint
+    for (const auto &dir_entry : std::filesystem::directory_iterator{path}) {
+        const auto &p = dir_entry.path();
+
+        PipeType pipe_type = detect_pipe_type(p);
+        if (pipe_type == PipeType::NONE)
+            continue;
+
+        HopperPipe *pipe =
+            (pipe_type == PipeType::IN ? endpoint->add_input_pipe(p)
+                                       : endpoint->add_output_pipe(p));
+
+        if (pipe != nullptr)
+            add_pipe(pipe);
+    }
 
     return endpoint_id;
 }
