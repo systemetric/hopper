@@ -16,7 +16,7 @@ class HopperPipe:
         self.endpoint = endpoint
         self.hopper = hopper
         self.nonblock = nonblock
-        self._fd = -1
+        self.fd = -1
 
     def _get_open_flags(self):
         flags = 0
@@ -68,15 +68,16 @@ class HopperPipe:
             os.close(fd)
             raise OSError(errno=errsv)
 
-        self._fd = fd
+        self.fd = fd
 
     def close(self):
-        fcntl.flock(self._fd, fcntl.LOCK_UN)
-        os.close(self._fd)
+        fcntl.flock(self.fd, fcntl.LOCK_UN)
+        os.close(self.fd)
+        self.fd = -1
 
     def read(self, len: int):
         try:
-            buf = os.read(self._fd, len)
+            buf = os.read(self.fd, len)
             return buf
         except OSError as e:
             if e.errno == EWOULDBLOCK:
@@ -86,7 +87,7 @@ class HopperPipe:
 
     def write(self, buf: bytes):
         try:
-            res = os.write(self._fd, buf)
+            res = os.write(self.fd, buf)
             return res
         except OSError as e:
             if e.errno == EWOULDBLOCK:

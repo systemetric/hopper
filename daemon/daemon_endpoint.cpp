@@ -12,9 +12,8 @@ uint32_t HopperDaemon::create_endpoint(const std::filesystem::path &path) {
 
     int inotify_watch_fd =
         inotify_add_watch(m_inotify_fd, path.c_str(), IN_CREATE | IN_DELETE);
-    if (inotify_watch_fd < 0) {
+    if (inotify_watch_fd < 0)
         return 0;
-    }
 
     auto *endpoint = new HopperEndpoint(endpoint_id, inotify_watch_fd, path);
     m_endpoints[endpoint_id] = endpoint;
