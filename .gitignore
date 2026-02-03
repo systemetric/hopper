@@ -1,7 +1,16 @@
-pipes/
-__pycache__/
-dist/
+.cache/
+.direnv/
 build/
-hopper.egg-info/
-tmplog.txt
-.gdb_history
+compile_commands.json
+result
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv

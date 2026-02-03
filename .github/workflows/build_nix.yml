@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "hopperx" ]
+  pull_request:
+    branches: [ "main", "hopperx" ]
+
+jobs:
+  build-x86_64:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v26
+
+    - name: Build Hopper x86_64
+      run: nix build .#hopper.cross-x86_64-linux
+
+  build-aarch64:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v26
+
+    - name: Build Hopper aarch64
+      run: nix build .#hopper.cross-aarch64-linux
+
