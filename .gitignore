@@ -5,7 +5,7 @@ compile_commands.json
 result
 
 # Python-generated files
-__pycache__/
+**/__pycache__/
 *.py[oc]
 build/
 dist/
