@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "main", "hopperx" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main", "hopperx" ]
+    branches: [ "main" ]
 
 jobs:
   build-x86_64:
