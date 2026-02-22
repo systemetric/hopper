@@ -78,21 +78,13 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
         std::filesystem::path p = endpoint->path();
         p /= ev->name;
 
-        if (std::filesystem::is_directory(p)) {
-            // nested endpoint
-            HopperEndpoint *tgt_endpoint = endpoint_by_path(p);
-            if (tgt_endpoint != nullptr)
-                delete_endpoint(tgt_endpoint->id());
-        } else {
-            // pipe
-            HopperPipe *pipe = endpoint->pipe_by_path(p);
+        HopperPipe *pipe = endpoint->pipe_by_path(p);
 
-            if (pipe != nullptr) {
-                if (pipe->status() == PipeStatus::ACTIVE)
-                    remove_pipe(endpoint, pipe->id());
+        if (pipe != nullptr) {
+            if (pipe->status() == PipeStatus::ACTIVE)
+                remove_pipe(endpoint, pipe->id());
 
-                endpoint->remove_by_id(pipe->id());
-            }
+            endpoint->remove_by_id(pipe->id());
         }
     }
 }
