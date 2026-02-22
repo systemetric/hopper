@@ -42,6 +42,7 @@ private:
     void delete_endpoint(uint32_t id);
 
     HopperEndpoint *endpoint_by_watch(int watch);
+    HopperEndpoint *endpoint_by_path(const std::filesystem::path &path);
     void setup_inotify();
     void handle_inotify();
     void handle_root_inotify(struct inotify_event *ev);

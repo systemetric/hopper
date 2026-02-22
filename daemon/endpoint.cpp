@@ -8,9 +8,8 @@
 namespace hopper {
 
 HopperEndpoint::HopperEndpoint(uint32_t id, int watch_fd,
-                               std::filesystem::path path)
-    : m_path(path), m_id(id), m_watch_fd(watch_fd) {
-    m_name = path.filename();
+                               std::filesystem::path path, std::string name)
+    : m_path(path), m_name(name), m_id(id), m_watch_fd(watch_fd) {
 }
 
 HopperEndpoint::~HopperEndpoint() {

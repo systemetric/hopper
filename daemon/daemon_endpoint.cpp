@@ -15,7 +15,9 @@ uint32_t HopperDaemon::create_endpoint(const std::filesystem::path &path) {
     if (inotify_watch_fd < 0)
         return 0;
 
-    auto *endpoint = new HopperEndpoint(endpoint_id, inotify_watch_fd, path);
+    auto name = path.lexically_relative(m_path);
+    auto *endpoint =
+        new HopperEndpoint(endpoint_id, inotify_watch_fd, path, name);
     m_endpoints[endpoint_id] = endpoint;
 
     std::cout << "CREATE " << *endpoint << std::endl;
@@ -25,15 +27,23 @@ uint32_t HopperDaemon::create_endpoint(const std::filesystem::path &path) {
         const auto &p = dir_entry.path();
 
         PipeType pipe_type = detect_pipe_type(p);
-        if (pipe_type == PipeType::NONE)
+        if (pipe_type == PipeType::NONE && std::filesystem::is_directory(p)) {
+            // nested endpoint
+            if (create_endpoint(p) == 0)
+                std::cerr << "Endpoint creation failed! Out of IDs?"
+                          << std::endl;
+        } else if (pipe_type == PipeType::NONE) {
+            // nothing of interest
             continue;
+        } else {
+            // pipe
+            HopperPipe *pipe =
+                (pipe_type == PipeType::IN ? endpoint->add_input_pipe(p)
+                                           : endpoint->add_output_pipe(p));
 
-        HopperPipe *pipe =
-            (pipe_type == PipeType::IN ? endpoint->add_input_pipe(p)
-                                       : endpoint->add_output_pipe(p));
-
-        if (pipe != nullptr)
-            add_pipe(pipe);
+            if (pipe != nullptr)
+                add_pipe(pipe);
+        }
     }
 
     return endpoint_id;
@@ -61,6 +71,14 @@ void HopperDaemon::delete_endpoint(const std::filesystem::path &path) {
 HopperEndpoint *HopperDaemon::endpoint_by_watch(int watch) {
     for (const auto &[_, endpoint] : m_endpoints)
         if (endpoint->watch_fd() == watch)
+            return endpoint;
+    return nullptr;
+}
+
+HopperEndpoint *
+HopperDaemon::endpoint_by_path(const std::filesystem::path &path) {
+    for (const auto &[_, endpoint] : m_endpoints)
+        if (endpoint->path() == path)
             return endpoint;
     return nullptr;
 }

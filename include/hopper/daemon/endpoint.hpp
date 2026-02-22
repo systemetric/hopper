@@ -38,7 +38,7 @@ private:
     int m_watch_fd;
 
 public:
-    HopperEndpoint(uint32_t id, int watch_fd, std::filesystem::path path);
+    HopperEndpoint(uint32_t id, int watch_fd, std::filesystem::path path, std::string name);
     ~HopperEndpoint();
 
     void on_pipe_readable(uint64_t id);

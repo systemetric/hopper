@@ -1,6 +1,7 @@
 #include "hopper/daemon/daemon.hpp"
 #include "hopper/daemon/util.hpp"
 
+#include <filesystem>
 #include <iostream>
 #include <limits.h>
 #include <unistd.h>
@@ -54,60 +55,78 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
         p /= ev->name;
 
         PipeType pipe_type = detect_pipe_type(p);
-        if (pipe_type == PipeType::NONE)
+        if (pipe_type == PipeType::NONE && std::filesystem::is_directory(p)) {
+            // nested endpoint
+            if (create_endpoint(p) == 0)
+                std::cerr << "Endpoint creation failed! Out of IDs?"
+                          << std::endl;
+        } else if (pipe_type == PipeType::NONE) {
+            // nothing of interest
             return;
+        } else {
+            // pipe
+            HopperPipe *pipe =
+                (pipe_type == PipeType::IN ? endpoint->add_input_pipe(p)
+                                           : endpoint->add_output_pipe(p));
 
-        HopperPipe *pipe =
-            (pipe_type == PipeType::IN ? endpoint->add_input_pipe(p)
-                                       : endpoint->add_output_pipe(p));
-
-        if (pipe != nullptr)
-            add_pipe(pipe);
+            if (pipe != nullptr)
+                add_pipe(pipe);
+        }
     }
 
     if (ev->mask & IN_DELETE) {
         std::filesystem::path p = endpoint->path();
         p /= ev->name;
 
-        HopperPipe *pipe = endpoint->pipe_by_path(p);
+        if (std::filesystem::is_directory(p)) {
+            // nested endpoint
+            HopperEndpoint *tgt_endpoint = endpoint_by_path(p);
+            if (tgt_endpoint != nullptr)
+                delete_endpoint(tgt_endpoint->id());
+        } else {
+            // pipe
+            HopperPipe *pipe = endpoint->pipe_by_path(p);
 
-        if (pipe != nullptr) {
-            if (pipe->status() == PipeStatus::ACTIVE)
-                remove_pipe(endpoint, pipe->id());
+            if (pipe != nullptr) {
+                if (pipe->status() == PipeStatus::ACTIVE)
+                    remove_pipe(endpoint, pipe->id());
 
-            endpoint->remove_by_id(pipe->id());
+                endpoint->remove_by_id(pipe->id());
+            }
         }
     }
 }
 
 void HopperDaemon::handle_inotify() {
-    struct inotify_event *iev = reinterpret_cast<struct inotify_event *>(
-        std::malloc(sizeof(struct inotify_event) + NAME_MAX + 1));
+    char buf[4096];
+    ssize_t size;
+    struct inotify_event *iev = {};
 
-    if (read(m_inotify_fd, iev, sizeof(struct inotify_event) + NAME_MAX + 1) <=
-        0)
+    if ((size = read(m_inotify_fd, &buf, 4096)) <= 0)
         return;
 
-    if (iev->wd == m_inotify_root_watch) {
-        handle_root_inotify(iev);
-        std::free(iev);
-        return;
+    for (char *ptr = buf; ptr < buf + size;
+         ptr += sizeof(struct inotify_event) + iev->len) {
+        iev = reinterpret_cast<struct inotify_event *>(ptr);
+
+        if (iev->wd == m_inotify_root_watch) {
+            handle_root_inotify(iev);
+            continue;
+        }
+
+        HopperEndpoint *endpoint = endpoint_by_watch(iev->wd);
+        if (endpoint == nullptr) {
+            std::cout << "No endpoint found for watch ID " << iev->wd
+                      << std::endl;
+            continue;
+        }
+
+        handle_endpoint_inotify(iev, endpoint);
+
+        // The endpoint is now closed
+        if (iev->mask & IN_IGNORED)
+            delete_endpoint(endpoint->id());
     }
-
-    HopperEndpoint *endpoint = endpoint_by_watch(iev->wd);
-    if (endpoint == nullptr) {
-        std::cout << "No endpoint found for watch ID " << iev->wd << std::endl;
-        std::free(iev);
-        return;
-    }
-
-    handle_endpoint_inotify(iev, endpoint);
-
-    // The endpoint is now closed
-    if (iev->mask & IN_IGNORED)
-        delete_endpoint(endpoint->id());
-
-    std::free(iev);
 }
 
 }; // namespace hopper
