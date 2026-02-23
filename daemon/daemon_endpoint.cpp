@@ -55,6 +55,8 @@ void HopperDaemon::delete_endpoint(uint32_t id) {
 
     std::cout << "DELETE " << *(m_endpoints[id]) << std::endl;
 
+    inotify_rm_watch(m_inotify_fd, m_endpoints[id]->watch_fd());
+
     delete m_endpoints[id];
     m_endpoints.erase(id);
 }

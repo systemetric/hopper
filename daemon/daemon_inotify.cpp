@@ -55,7 +55,7 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
         p /= ev->name;
 
         PipeType pipe_type = detect_pipe_type(p);
-        if (pipe_type == PipeType::NONE && std::filesystem::is_directory(p)) {
+        if (pipe_type == PipeType::NONE && ev->mask & IN_ISDIR) {
             // nested endpoint
             if (create_endpoint(p) == 0)
                 std::cerr << "Endpoint creation failed! Out of IDs?"
@@ -78,13 +78,19 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
         std::filesystem::path p = endpoint->path();
         p /= ev->name;
 
-        HopperPipe *pipe = endpoint->pipe_by_path(p);
+        if (ev->mask & IN_ISDIR) {
+            // nested endpoint
+            delete_endpoint(p);
+        } else {
+            // pipe
+            HopperPipe *pipe = endpoint->pipe_by_path(p);
 
-        if (pipe != nullptr) {
-            if (pipe->status() == PipeStatus::ACTIVE)
-                remove_pipe(endpoint, pipe->id());
+            if (pipe != nullptr) {
+                if (pipe->status() == PipeStatus::ACTIVE)
+                    remove_pipe(endpoint, pipe->id());
 
-            endpoint->remove_by_id(pipe->id());
+                endpoint->remove_by_id(pipe->id());
+            }
         }
     }
 }
@@ -106,6 +112,11 @@ void HopperDaemon::handle_inotify() {
             continue;
         }
 
+        if (iev->mask & IN_IGNORED) {
+            // the endpoint probably got deleted, ignore
+            continue;
+        }
+
         HopperEndpoint *endpoint = endpoint_by_watch(iev->wd);
         if (endpoint == nullptr) {
             std::cout << "No endpoint found for watch ID " << iev->wd
@@ -114,10 +125,6 @@ void HopperDaemon::handle_inotify() {
         }
 
         handle_endpoint_inotify(iev, endpoint);
-
-        // The endpoint is now closed
-        if (iev->mask & IN_IGNORED)
-            delete_endpoint(endpoint->id());
     }
 }
 
