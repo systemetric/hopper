@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hopper"
+version = "0.1.0"
+authors = [
+    { name = "Nathan Gill", email = "nathan.j.gill@outlook.com" }
+]
+
+[tool.setuptools]
+packages = ["hopper"]
+
+[tool.setuptools.package-dir]
+hopper = "client/py"

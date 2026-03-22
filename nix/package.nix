@@ -1,4 +1,11 @@
-{ stdenv, meson, ninja, pkg-config, python313 }:
+{
+  lib,
+  stdenv,
+  meson,
+  ninja,
+  pkg-config,
+  python313,
+}:
 
 stdenv.mkDerivation {
   name = "hopper";
@@ -11,4 +18,11 @@ stdenv.mkDerivation {
     pkg-config
     python313
   ];
+
+  meta = {
+    description = "Hopper IPC system";
+    homepage = "https://github.com/systemetric/hopper";
+    license = lib.licenses.bsd2;
+    platforms = lib.platforms.linux;
+  };
 }

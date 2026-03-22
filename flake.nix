@@ -28,8 +28,12 @@
           hopper = {
             default = pkgs.callPackage ./nix/package.nix { };
             cross-x86_64-linux = pkgs.pkgsCross.gnu64.pkgsStatic.callPackage ./nix/package.nix { };
-            cross-aarch64-linux = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic.callPackage ./nix/package.nix { };
+            cross-aarch64-linux =
+              pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic.callPackage ./nix/package.nix
+                { };
           };
+
+          hopper-python.default = pkgs.callPackage ./nix/python.nix { };
         };
 
         devShell = pkgs.mkShell {
