@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = ["client/rs"]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "BSD-2-Clause"
+authors = ["Nathan Gill <nathan.j.gill@outlook.com>"]

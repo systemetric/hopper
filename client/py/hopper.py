@@ -63,7 +63,7 @@ class HopperPipe:
             fcntl.flock(fd, (fcntl.LOCK_EX if self.type == HopperPipeType.IN else fcntl.LOCK_SH) | fcntl.LOCK_NB);
         except OSError as e:
             if e.errno == errno.EWOULDBLOCK:
-                e.errno = EBUSY
+                e.errno = errno.EBUSY
             errsv = e.errno
             os.close(fd)
             raise OSError(errno=errsv)

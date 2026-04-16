@@ -34,6 +34,7 @@
           };
 
           hopper-python.default = pkgs.callPackage ./nix/python.nix { };
+          hopper-rust.default = pkgs.callPackage ./nix/rust.nix { };
         };
 
         devShell = pkgs.mkShell {
@@ -43,7 +44,15 @@
             ninja
             pkg-config
 
+            # python lib
             python313
+
+            # rust lib
+            cargo
+            rustc
+            rustfmt
+            rust-analyzer
+            rustPackages.clippy
 
             # one probably wants these too
             gdb

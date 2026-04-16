@@ -31,3 +31,27 @@ jobs:
     - name: Build Hopper aarch64
       run: nix build .#hopper.cross-aarch64-linux
 
+  build-python:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v26
+
+    - name: Build Hopper Python client
+      run: nix build .#hopper-python.default
+
+  build-rust:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v26
+
+    - name: Build Hopper Rust client
+      run: nix build .#hopper-rust.default
+
