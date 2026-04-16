@@ -1,6 +1,6 @@
 # hopper
 
-Hopper is a general-purpose, stream-oriented, broadcast IPC system for Linux systems
+Hopper is a general-purpose, stream-oriented, broadcast IPC system for Linux
 systems.
 
 ## License
