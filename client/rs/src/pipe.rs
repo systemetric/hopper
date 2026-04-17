@@ -66,10 +66,8 @@ impl Pipe {
             &self.name,
             if self.mode.contains(PipeMode::IN) {
                 "in"
-            } else if self.mode.contains(PipeMode::OUT) {
-                "out"
             } else {
-                "" // how the hell did we get here?
+                "out"
             }
         ))
     }
@@ -208,10 +206,21 @@ impl Pipe {
     pub fn is_open(&self) -> bool {
         self.lock.is_some()
     }
+
+    /// Return the file descriptor representing the current pipe or an error
+    /// if it is not open.
+    pub fn fd(&self) -> Result<&OwnedFd, Error> {
+        if let Some(lock) = &self.lock {
+            Ok(lock.deref())
+        } else {
+            Err(Error::NotOpen)
+        }
+    }
 }
 
 impl Drop for Pipe {
     fn drop(&mut self) {
+        // we don't care if close fails, there's nothing we can do
         let _ = self.close();
     }
 }
