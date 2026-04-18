@@ -96,6 +96,14 @@ impl Pipe {
             )
         };
 
+        tracing::debug!(
+            "Init(mode = {:#?}, name = {}, endpoint = {}, hopper = {:#?})",
+            mode,
+            name.as_ref(),
+            endpoint.as_ref(),
+            hopper
+        );
+
         Ok(Self {
             mode,
             name: name.as_ref().to_string(),
@@ -130,6 +138,8 @@ impl Pipe {
             Err(Errno::EEXIST) => {}
             Err(e) => return Err(Error::Other(e)),
         }
+
+        tracing::debug!("Open(path = {:#?})", pipe);
 
         let flags = self.get_open_flags();
         let fd = open(&pipe, flags, Mode::empty()).map_err(Error::Other)?;
@@ -170,6 +180,8 @@ impl Pipe {
             Err(e) => return Err(Error::Other(e)),
         };
 
+        tracing::debug!("Read(res = {res})");
+
         Ok(res)
     }
 
@@ -182,13 +194,16 @@ impl Pipe {
             Err(e) => return Err(Error::Other(e)),
         };
 
+        tracing::debug!("Write(res = {res})");
+
         Ok(res)
     }
 
     /// Close the pipe, freeing all locks.
     pub fn close(&mut self) -> Result<(), Error> {
-        let lock = self.lock.take();
+        tracing::debug!("Close");
 
+        let lock = self.lock.take();
         if let Some(lock) = lock {
             match lock.unlock() {
                 Ok(fd) => close(fd).map_err(Error::Other)?,
