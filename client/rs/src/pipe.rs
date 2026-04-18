@@ -97,7 +97,7 @@ impl Pipe {
         };
 
         tracing::debug!(
-            "Init(mode = {:#?}, name = {}, endpoint = {}, hopper = {:#?})",
+            "Init(mode = {:?}, name = {}, endpoint = {}, hopper = {:#?})",
             mode,
             name.as_ref(),
             endpoint.as_ref(),
