@@ -17,6 +17,8 @@ pub enum Error {
     Other(Errno),
 }
 
+impl std::error::Error for Error {}
+
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -31,3 +33,4 @@ impl Display for Error {
         }
     }
 }
+
