@@ -45,6 +45,7 @@ private:
     HopperEndpoint *endpoint_by_path(const std::filesystem::path &path);
     void setup_inotify();
     void handle_inotify();
+    void setup_root_endpoints();
     void handle_root_inotify(struct inotify_event *ev);
     void handle_endpoint_inotify(struct inotify_event *ev,
                                  HopperEndpoint *endpoint);

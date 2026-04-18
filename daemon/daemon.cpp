@@ -59,6 +59,8 @@ void HopperDaemon::process_events(struct epoll_event *events, int n_events) {
 int HopperDaemon::run() {
     int res = 0;
 
+    setup_root_endpoints();
+
     std::unique_ptr<struct epoll_event[]> events(
         new struct epoll_event[m_max_events]);
 

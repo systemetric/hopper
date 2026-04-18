@@ -85,4 +85,14 @@ HopperDaemon::endpoint_by_path(const std::filesystem::path &path) {
     return nullptr;
 }
 
+void HopperDaemon::setup_root_endpoints() {
+    // iter over all directories and add them as endpoints
+    for (const auto &dir_entry : std::filesystem::directory_iterator{m_path}) {
+        const auto &p = dir_entry.path();
+
+        if (std::filesystem::is_directory(p) && create_endpoint(p) == 0)
+            std::cerr << "Endpoint creation failed! Out of IDs?" << std::endl;
+    }
+}
+
 }; // namespace hopper
