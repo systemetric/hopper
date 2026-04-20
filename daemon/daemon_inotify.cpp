@@ -36,7 +36,8 @@ void HopperDaemon::handle_root_inotify(struct inotify_event *ev) {
         std::filesystem::path p = m_path;
         p /= ev->name;
 
-        if (create_endpoint(p) == 0)
+        // only directories can be endpoints
+        if (std::filesystem::is_directory(p) && create_endpoint(p) == 0)
             std::cerr << "Endpoint creation failed! Out of IDs?" << std::endl;
     }
 
@@ -44,7 +45,8 @@ void HopperDaemon::handle_root_inotify(struct inotify_event *ev) {
         std::filesystem::path p = m_path;
         p /= ev->name;
 
-        delete_endpoint(p);
+        if (std::filesystem::is_directory(p))
+            delete_endpoint(p);
     }
 }
 
