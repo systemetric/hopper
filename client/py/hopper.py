@@ -80,7 +80,7 @@ class HopperPipe:
             buf = os.read(self.fd, len)
             return buf
         except OSError as e:
-            if e.errno == EWOULDBLOCK:
+            if e.errno == errno.EWOULDBLOCK:
                 return b''
             else:
                 raise e
@@ -90,7 +90,7 @@ class HopperPipe:
             res = os.write(self.fd, buf)
             return res
         except OSError as e:
-            if e.errno == EWOULDBLOCK:
+            if e.errno == errno.EWOULDBLOCK:
                 return 0;
             else:
                 raise e
