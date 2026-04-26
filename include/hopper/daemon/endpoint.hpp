@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "hopper/daemon/buffer.hpp"
+#include "hopper/daemon/logging.hpp"
 #include "hopper/daemon/pipe.hpp"
 
 namespace hopper {
@@ -34,11 +35,13 @@ private:
 
     std::filesystem::path m_path;
     std::string m_name;
+    Logger &m_logger;
     uint32_t m_id;
     int m_watch_fd;
 
 public:
-    HopperEndpoint(uint32_t id, int watch_fd, std::filesystem::path path, std::string name);
+    HopperEndpoint(uint32_t id, int watch_fd, std::filesystem::path path,
+                   std::string name, Logger &logger);
     ~HopperEndpoint();
 
     void on_pipe_readable(uint64_t id);

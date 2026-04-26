@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "hopper/daemon/endpoint.hpp"
+#include "hopper/daemon/logging.hpp"
 #include "hopper/daemon/pipe.hpp"
 
 namespace hopper {
@@ -36,6 +37,7 @@ private:
     int m_timeout = 250;
 
     std::filesystem::path m_path;
+    Logger &m_logger;
 
     uint32_t create_endpoint(const std::filesystem::path &path);
     void delete_endpoint(const std::filesystem::path &path);
@@ -56,8 +58,8 @@ private:
     void refresh_pipes();
 
 public:
-    HopperDaemon(std::filesystem::path path, int max_events = 64,
-                 int m_timeout = 250);
+    HopperDaemon(std::filesystem::path path, Logger &logger,
+                 int max_events = 64, int m_timeout = 250);
     ~HopperDaemon();
 
     int run();

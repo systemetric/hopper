@@ -2,7 +2,6 @@
 #include "hopper/daemon/util.hpp"
 
 #include <filesystem>
-#include <iostream>
 #include <limits.h>
 #include <unistd.h>
 
@@ -27,8 +26,7 @@ void HopperDaemon::setup_inotify() {
 
 void HopperDaemon::handle_root_inotify(struct inotify_event *ev) {
     if (ev->mask & IN_DELETE_SELF) {
-        std::cerr << "Hopper " << m_path << " got deleted, exiting... :("
-                  << std::endl;
+        m_logger.error("Hopper ", m_path, " got deleted, exiting... :(");
         _exit(1);
     }
 
@@ -38,7 +36,7 @@ void HopperDaemon::handle_root_inotify(struct inotify_event *ev) {
 
         // only directories can be endpoints
         if (std::filesystem::is_directory(p) && create_endpoint(p) == 0)
-            std::cerr << "Endpoint creation failed! Out of IDs?" << std::endl;
+            m_logger.warn("Endpoint creation failed! Out of IDs?");
     }
 
     if (ev->mask & IN_DELETE) {
@@ -60,8 +58,7 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
         if (pipe_type == PipeType::NONE && ev->mask & IN_ISDIR) {
             // nested endpoint
             if (create_endpoint(p) == 0)
-                std::cerr << "Endpoint creation failed! Out of IDs?"
-                          << std::endl;
+                m_logger.warn("Endpoint creation failed! Out of IDs?");
         } else if (pipe_type == PipeType::NONE) {
             // nothing of interest
             return;
@@ -121,8 +118,7 @@ void HopperDaemon::handle_inotify() {
 
         HopperEndpoint *endpoint = endpoint_by_watch(iev->wd);
         if (endpoint == nullptr) {
-            std::cout << "No endpoint found for watch ID " << iev->wd
-                      << std::endl;
+            m_logger.warn("No endpoint found for watch ID ", iev->wd);
             continue;
         }
 

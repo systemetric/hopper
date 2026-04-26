@@ -1,5 +1,4 @@
 #include <filesystem>
-#include <iostream>
 
 #include "hopper/daemon/endpoint.hpp"
 #include "hopper/daemon/pipe.hpp"
@@ -8,9 +7,10 @@
 namespace hopper {
 
 HopperEndpoint::HopperEndpoint(uint32_t id, int watch_fd,
-                               std::filesystem::path path, std::string name)
-    : m_path(path), m_name(name), m_id(id), m_watch_fd(watch_fd) {
-}
+                               std::filesystem::path path, std::string name,
+                               Logger &logger)
+    : m_path(path), m_name(name), m_logger(logger), m_id(id),
+      m_watch_fd(watch_fd) {}
 
 HopperEndpoint::~HopperEndpoint() {
     for (const auto &[_, pipe] : m_inputs)
@@ -29,7 +29,7 @@ void HopperEndpoint::on_pipe_readable(uint64_t id) {
     if (res == (size_t)-1)
         throw_errno("read");
 
-    std::cout << *pipe << " -> " << res << " bytes\n";
+    m_logger.trace(*pipe, " -> ", res, " bytes");
 }
 
 void HopperEndpoint::flush_pipes() {
@@ -39,7 +39,7 @@ void HopperEndpoint::flush_pipes() {
 
         size_t res = m_buffer.read(pipe);
         if (res > 0)
-            std::cout << *pipe << " <- " << res << " bytes\n";
+            m_logger.trace(*pipe, " <- ", res, " bytes");
     }
 }
 
@@ -65,7 +65,7 @@ HopperPipe *HopperEndpoint::add_input_pipe(const std::filesystem::path &path) {
     HopperPipe *p = new HopperPipe(id, m_name, PipeType::IN, path, nullptr);
     m_inputs[id] = p;
 
-    std::cout << "OPEN " << *p << "\n";
+    m_logger.debug("OPEN ", *p);
 
     return p;
 }
@@ -82,7 +82,7 @@ HopperPipe *HopperEndpoint::add_output_pipe(const std::filesystem::path &path) {
     HopperPipe *p = new HopperPipe(id, m_name, PipeType::OUT, path, marker);
     m_outputs[id] = p;
 
-    std::cout << "OPEN " << *p << "\n";
+    m_logger.debug("OPEN ", *p);
 
     return p;
 }
@@ -93,14 +93,16 @@ void HopperEndpoint::remove_by_id(uint64_t pipe_id) {
     if (type == PipeType::IN && m_inputs.contains(pipe_id)) {
         HopperPipe *pipe = m_inputs[pipe_id];
         m_buffer.delete_marker(pipe->marker());
-        std::cout << "CLOSE " << *pipe << "\n";
+
+        m_logger.debug("CLOSE ", *pipe);
 
         delete pipe;
         m_inputs.erase(pipe_id);
     } else if (type == PipeType::OUT && m_outputs.contains(pipe_id)) {
         HopperPipe *pipe = m_outputs[pipe_id];
         m_buffer.delete_marker(pipe->marker());
-        std::cout << "CLOSE " << *pipe << "\n";
+
+        m_logger.debug("CLOSE ", *pipe);
 
         delete pipe;
         m_outputs.erase(pipe_id);

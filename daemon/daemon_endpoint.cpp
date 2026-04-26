@@ -1,7 +1,6 @@
 #include "hopper/daemon/daemon.hpp"
 #include "hopper/daemon/util.hpp"
 #include <filesystem>
-#include <iostream>
 
 namespace hopper {
 
@@ -17,10 +16,10 @@ uint32_t HopperDaemon::create_endpoint(const std::filesystem::path &path) {
 
     auto name = path.lexically_relative(m_path);
     auto *endpoint =
-        new HopperEndpoint(endpoint_id, inotify_watch_fd, path, name);
+        new HopperEndpoint(endpoint_id, inotify_watch_fd, path, name, m_logger);
     m_endpoints[endpoint_id] = endpoint;
 
-    std::cout << "CREATE " << *endpoint << std::endl;
+    m_logger.debug("CREATE ", *endpoint);
 
     // Open anything that may already exist in the endpoint
     for (const auto &dir_entry : std::filesystem::directory_iterator{path}) {
@@ -30,8 +29,7 @@ uint32_t HopperDaemon::create_endpoint(const std::filesystem::path &path) {
         if (pipe_type == PipeType::NONE && std::filesystem::is_directory(p)) {
             // nested endpoint
             if (create_endpoint(p) == 0)
-                std::cerr << "Endpoint creation failed! Out of IDs?"
-                          << std::endl;
+                m_logger.warn("Endpoint creation failed! Out of IDs?");
         } else if (pipe_type == PipeType::NONE) {
             // nothing of interest
             continue;
@@ -53,7 +51,7 @@ void HopperDaemon::delete_endpoint(uint32_t id) {
     if (!m_endpoints.contains(id))
         return;
 
-    std::cout << "DELETE " << *(m_endpoints[id]) << std::endl;
+    m_logger.debug("DELETE ", *(m_endpoints[id]));
 
     inotify_rm_watch(m_inotify_fd, m_endpoints[id]->watch_fd());
 
@@ -91,7 +89,7 @@ void HopperDaemon::setup_root_endpoints() {
         const auto &p = dir_entry.path();
 
         if (std::filesystem::is_directory(p) && create_endpoint(p) == 0)
-            std::cerr << "Endpoint creation failed! Out of IDs?" << std::endl;
+            m_logger.warn("Endpoint creation failed! Out of IDs?");
     }
 }
 

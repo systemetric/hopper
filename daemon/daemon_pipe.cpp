@@ -1,6 +1,5 @@
 #include "hopper/daemon/daemon.hpp"
 #include "hopper/daemon/util.hpp"
-#include <iostream>
 
 namespace hopper {
 
@@ -16,7 +15,7 @@ void HopperDaemon::remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id) {
             throw_errno("epoll_ctl DEL");
         pipe->close_pipe();
 
-        std::cout << "DOWN " << *pipe << "\n";
+        m_logger.debug("DOWN ", *pipe);
     }
 }
 
@@ -36,7 +35,7 @@ void HopperDaemon::add_pipe(HopperPipe *pipe) {
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, pipe->fd(), &ev) != 0)
         throw_errno("epoll_ctl ADD");
 
-    std::cout << "UP " << *pipe << "\n";
+    m_logger.debug("UP ", *pipe);
 }
 
 void HopperDaemon::refresh_pipes() {

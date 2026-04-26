@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <iostream>
 #include <limits.h>
 
 #include <csignal>
@@ -12,9 +11,10 @@
 
 namespace hopper {
 
-HopperDaemon::HopperDaemon(std::filesystem::path path, int max_events,
-                           int timeout)
-    : m_max_events(max_events), m_timeout(timeout), m_path(path) {
+HopperDaemon::HopperDaemon(std::filesystem::path path, Logger &logger,
+                           int max_events, int timeout)
+    : m_max_events(max_events), m_timeout(timeout), m_path(path),
+      m_logger(logger) {
     if (!std::filesystem::exists(path)) {
         std::filesystem::create_directories(path);
     }

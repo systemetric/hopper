@@ -180,7 +180,7 @@ impl Pipe {
             Err(e) => return Err(Error::Other(e)),
         };
 
-        tracing::debug!("Read(res = {res})");
+        tracing::trace!("Read(res = {res})");
 
         Ok(res)
     }
@@ -194,7 +194,7 @@ impl Pipe {
             Err(e) => return Err(Error::Other(e)),
         };
 
-        tracing::debug!("Write(res = {res})");
+        tracing::trace!("Write(res = {res})");
 
         Ok(res)
     }
