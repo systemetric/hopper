@@ -1,9 +1,9 @@
 [package]
 name = "hopper"
 version = "0.1.1"
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
+edition = "2024"
+license = "BSD-2-Clause"
+authors = ["Nathan Gill <nathan.j.gill@outlook.com>"]
 
 [dependencies]
 bitflags = "2.11.0"
