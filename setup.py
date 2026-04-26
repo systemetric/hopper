@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="hopper",
-    version="0.1.1",
+    version="0.1.2",
     packages=["hopper"],
     package_dir={"hopper": "client/py"},
     author="Nathan Gill",
