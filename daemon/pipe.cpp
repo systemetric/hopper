@@ -58,9 +58,12 @@ void HopperPipe::close_pipe() {
         close(m_fd);
 }
 
-size_t HopperPipe::write_pipe(void *src, size_t len) {
+size_t HopperPipe::write_pipe(void *src, size_t len, bool *more) {
     if (m_type == PipeType::IN)
         return -1;
+
+    if (more)
+        *more = true;
 
     if (len == 0)
         return 0;
@@ -71,9 +74,11 @@ size_t HopperPipe::write_pipe(void *src, size_t len) {
         ssize_t res = write(m_fd, reinterpret_cast<char *>(src) + done_len,
                             len - done_len);
 
-        if (res == -1 && (errno == EWOULDBLOCK || errno == EINTR))
+        if (res == -1 && (errno == EWOULDBLOCK || errno == EINTR)) {
+            if (more)
+                *more = false;
             return done_len;
-        else if (res == -1) {
+        } else if (res == -1) {
             perror("write");
             return -1;
         }
@@ -84,9 +89,12 @@ size_t HopperPipe::write_pipe(void *src, size_t len) {
     return done_len;
 }
 
-size_t HopperPipe::read_pipe(void *dst, size_t len) {
+size_t HopperPipe::read_pipe(void *dst, size_t len, bool *more) {
     if (m_type == PipeType::OUT)
         return -1;
+
+    if (more)
+        *more = true;
 
     if (len == 0)
         return 0;
@@ -97,13 +105,18 @@ size_t HopperPipe::read_pipe(void *dst, size_t len) {
         ssize_t res = read(m_fd, reinterpret_cast<char *>(dst) + done_len,
                            len - done_len);
 
-        if (res == -1 && (errno == EWOULDBLOCK || errno == EINTR))
+        if (res == -1 && (errno == EWOULDBLOCK || errno == EINTR)) {
+            if (more)
+                *more = false;
             return done_len;
-        else if (res == -1) {
+        } else if (res == -1) {
             perror("read");
             return -1;
-        } else if (res == 0)
+        } else if (res == 0) {
+            if (more)
+                *more = false;
             break;
+        }
 
         done_len += res;
     }

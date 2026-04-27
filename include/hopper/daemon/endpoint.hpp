@@ -2,6 +2,7 @@
 #define endpoint_hpp_INCLUDED
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include "hopper/daemon/buffer.hpp"
 #include "hopper/daemon/logging.hpp"
@@ -13,6 +14,9 @@ class HopperEndpoint {
 private:
     std::unordered_map<uint64_t, HopperPipe *> m_inputs;
     std::unordered_map<uint64_t, HopperPipe *> m_outputs;
+
+    // inputs that may have more data
+    std::unordered_set<uint64_t> m_more;
 
     HopperBuffer m_buffer{};
 

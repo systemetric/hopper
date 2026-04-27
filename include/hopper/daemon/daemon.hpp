@@ -34,7 +34,7 @@ private:
     int m_epoll_fd = -1;
 
     int m_max_events = 64;
-    int m_timeout = 250;
+    int m_timeout = 100;
 
     std::filesystem::path m_path;
     Logger &m_logger;

@@ -56,12 +56,12 @@ size_t HopperBuffer::write(void *src, size_t len) {
     return done_len;
 }
 
-size_t HopperBuffer::write(HopperPipe *pipe) {
+size_t HopperBuffer::write(HopperPipe *pipe, bool *more) {
     size_t max_len = max_write();
     size_t done_len = 0;
 
     size_t next_len = std::min((m_buf.size() - m_edge), max_len);
-    size_t res = pipe->read_pipe(&m_buf[m_edge], next_len);
+    size_t res = pipe->read_pipe(&m_buf[m_edge], next_len, more);
     if (res == (size_t)-1)
         // -1 indicates read error
         return -1;
@@ -74,7 +74,7 @@ size_t HopperBuffer::write(HopperPipe *pipe) {
         return done_len;
 
     next_len = max_len - next_len;
-    res = pipe->read_pipe(&m_buf[m_edge], next_len);
+    res = pipe->read_pipe(&m_buf[m_edge], next_len, more);
     if (res == (size_t)-1)
         return -1;
 
@@ -106,13 +106,13 @@ size_t HopperBuffer::read(BufferMarker *m, void *dst, size_t len) {
     return done_len;
 }
 
-size_t HopperBuffer::read(HopperPipe *pipe) {
+size_t HopperBuffer::read(HopperPipe *pipe, bool *more) {
     BufferMarker *m = pipe->marker();
     size_t max_len = max_read(m);
     size_t done_len = 0;
 
     size_t next_len = std::min((m_buf.size() - m->pos()), max_len);
-    size_t res = pipe->write_pipe(&m_buf[m->pos()], next_len);
+    size_t res = pipe->write_pipe(&m_buf[m->pos()], next_len, more);
     if (res == (size_t)-1)
         return -1;
 
@@ -122,7 +122,7 @@ size_t HopperBuffer::read(HopperPipe *pipe) {
         return done_len;
 
     next_len = max_len - next_len;
-    res = pipe->write_pipe(&m_buf[m->pos()], next_len);
+    res = pipe->write_pipe(&m_buf[m->pos()], next_len, more);
     if (res == (size_t)-1)
         return -1;
 
@@ -134,7 +134,7 @@ size_t HopperBuffer::read(HopperPipe *pipe) {
 size_t HopperBuffer::max_write() {
     size_t cap = m_buf.size();
     if (m_markers.empty())
-        return cap;
+        return std::max((size_t)0, cap - 1);
 
     size_t min_dist = cap;
 
@@ -148,7 +148,7 @@ size_t HopperBuffer::max_write() {
             min_dist = d;
     }
 
-    return min_dist;
+    return std::max((size_t)0, min_dist - 1);
 }
 
 size_t HopperBuffer::max_read(BufferMarker *m) {

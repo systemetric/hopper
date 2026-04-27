@@ -1,4 +1,7 @@
+#include <fcntl.h>
 #include <filesystem>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 #include "hopper/daemon/endpoint.hpp"
 #include "hopper/daemon/pipe.hpp"
@@ -25,21 +28,41 @@ void HopperEndpoint::on_pipe_readable(uint64_t id) {
 
     HopperPipe *pipe = m_inputs[id];
 
-    size_t res = m_buffer.write(pipe);
+/*
+ *  Calculation for "pipe pressure"
+    int p_sz, p_nb;
+    if ((p_sz = fcntl(pipe->fd(), F_GETPIPE_SZ)) != -1 &&
+        (ioctl(pipe->fd(), FIONREAD, &p_nb) > -1)) {
+        m_logger.trace(*pipe, ": ", (float)p_nb / (float)p_sz);
+    }
+*/
+
+    bool more = false;
+    size_t res = m_buffer.write(pipe, &more);
     if (res == (size_t)-1)
         throw_errno("read");
 
-    m_logger.trace(*pipe, " -> ", res, " bytes");
+    if (more && !m_more.contains(id))
+        m_more.insert(id);
+
+    m_logger.trace(*pipe, " -> ", res, " bytes", (more ? " ++" : ""));
 }
 
 void HopperEndpoint::flush_pipes() {
+    auto c_more = std::unordered_set<uint64_t>(m_more.begin(), m_more.end());
+    for (const uint64_t id : c_more) {
+        m_more.erase(id);
+        on_pipe_readable(id);
+    }
+
     for (const auto &[_, pipe] : m_outputs) {
         if (pipe->status() == PipeStatus::INACTIVE)
             continue;
 
-        size_t res = m_buffer.read(pipe);
+        bool more = false;
+        size_t res = m_buffer.read(pipe, &more);
         if (res > 0)
-            m_logger.trace(*pipe, " <- ", res, " bytes");
+            m_logger.trace(*pipe, " <- ", res, " bytes", (more ? " ++" : ""));
     }
 }
 
@@ -98,6 +121,7 @@ void HopperEndpoint::remove_by_id(uint64_t pipe_id) {
 
         delete pipe;
         m_inputs.erase(pipe_id);
+        m_more.erase(pipe_id);
     } else if (type == PipeType::OUT && m_outputs.contains(pipe_id)) {
         HopperPipe *pipe = m_outputs[pipe_id];
         m_buffer.delete_marker(pipe->marker());

@@ -40,8 +40,8 @@ public:
 
     int open_pipe();
     void close_pipe();
-    size_t write_pipe(void *src, size_t len);
-    size_t read_pipe(void *dst, size_t len);
+    size_t write_pipe(void *src, size_t len, bool *more);
+    size_t read_pipe(void *dst, size_t len, bool *more);
 
     const std::filesystem::path &path() { return m_path; }
     BufferMarker *marker() { return m_marker; }
