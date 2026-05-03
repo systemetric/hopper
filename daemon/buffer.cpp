@@ -5,11 +5,14 @@
 #include "hopper/daemon/marker.hpp"
 #include "hopper/daemon/pipe.hpp"
 
-namespace hopper {
+namespace hopper
+{
 
 /* BufferMarker */
 
-void BufferMarker::seek(size_t offset, size_t max, SeekDirection dir) {
+void
+BufferMarker::seek(size_t offset, size_t max, SeekDirection dir)
+{
     if (dir == SeekDirection::FORWARD)
         m_pos = (m_pos + offset) % max;
     else
@@ -20,19 +23,25 @@ void BufferMarker::seek(size_t offset, size_t max, SeekDirection dir) {
 
 HopperBuffer::HopperBuffer(size_t len) : m_edge(0) { m_buf.resize(len); }
 
-BufferMarker *HopperBuffer::create_marker() {
+BufferMarker *
+HopperBuffer::create_marker()
+{
     auto *m = new BufferMarker(m_edge);
     m_markers.push_back(m);
     return m;
 }
 
-void HopperBuffer::delete_marker(BufferMarker *marker) {
+void
+HopperBuffer::delete_marker(BufferMarker *marker)
+{
     auto tgt = std::find(m_markers.begin(), m_markers.end(), marker);
     if (tgt != m_markers.end())
         m_markers.erase(tgt);
 }
 
-size_t HopperBuffer::write(void *src, size_t len) {
+size_t
+HopperBuffer::write(void *src, size_t len)
+{
     size_t max_len = std::min(len, max_write());
     size_t done_len = 0;
 
@@ -56,7 +65,9 @@ size_t HopperBuffer::write(void *src, size_t len) {
     return done_len;
 }
 
-size_t HopperBuffer::write(HopperPipe *pipe, bool *more) {
+size_t
+HopperBuffer::write(HopperPipe *pipe, bool *more)
+{
     size_t max_len = max_write();
     size_t done_len = 0;
 
@@ -83,7 +94,9 @@ size_t HopperBuffer::write(HopperPipe *pipe, bool *more) {
     return done_len;
 }
 
-size_t HopperBuffer::read(BufferMarker *m, void *dst, size_t len) {
+size_t
+HopperBuffer::read(BufferMarker *m, void *dst, size_t len)
+{
     // Just see the arithmetic in `write`, it's the same here.
 
     size_t max_len = std::min(len, max_read(m));
@@ -106,7 +119,9 @@ size_t HopperBuffer::read(BufferMarker *m, void *dst, size_t len) {
     return done_len;
 }
 
-size_t HopperBuffer::read(HopperPipe *pipe, bool *more) {
+size_t
+HopperBuffer::read(HopperPipe *pipe, bool *more)
+{
     BufferMarker *m = pipe->marker();
     size_t max_len = max_read(m);
     size_t done_len = 0;
@@ -131,7 +146,9 @@ size_t HopperBuffer::read(HopperPipe *pipe, bool *more) {
     return done_len;
 }
 
-size_t HopperBuffer::max_write() {
+size_t
+HopperBuffer::max_write()
+{
     size_t cap = m_buf.size();
     if (m_markers.empty())
         return std::max((size_t)0, cap - 1);
@@ -151,7 +168,9 @@ size_t HopperBuffer::max_write() {
     return std::max((size_t)0, min_dist - 1);
 }
 
-size_t HopperBuffer::max_read(BufferMarker *m) {
+size_t
+HopperBuffer::max_read(BufferMarker *m)
+{
     size_t cap = m_buf.size();
     return (m_edge - m->pos() + cap) % cap;
 }

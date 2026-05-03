@@ -3,14 +3,16 @@
 
 #include <cstddef>
 
-namespace hopper {
+namespace hopper
+{
 
 enum SeekDirection {
     FORWARD,
     REVERSE,
 };
 
-class BufferMarker {
+class BufferMarker
+{
 private:
     size_t m_pos;
 
@@ -20,7 +22,11 @@ public:
     void seek(size_t offset, size_t max,
               SeekDirection dir = SeekDirection::FORWARD);
 
-    size_t pos() { return m_pos; }
+    size_t
+    pos()
+    {
+        return m_pos;
+    }
 };
 
 }; // namespace hopper

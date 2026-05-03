@@ -6,12 +6,21 @@
 
 #if __has_include(<unistd.h>)
 #include <unistd.h>
-inline bool is_tty() { return isatty(STDOUT_FILENO); }
+inline bool
+is_tty()
+{
+    return isatty(STDOUT_FILENO);
+}
 #else
-inline bool is_tty() { return false; }
+inline bool
+is_tty()
+{
+    return false;
+}
 #endif
 
-namespace hopper {
+namespace hopper
+{
 
 enum class LogLevel : int {
     Trace = 0,
@@ -39,12 +48,16 @@ inline const char *_HOPPER_LEVEL_STR[] = {
     "\x1b[1;33m" _HOPPER_WARN_STR "\x1b[0m",
     "\x1b[1;31m" _HOPPER_ERROR_STR "\x1b[0m"};
 
-class Logger {
+class Logger
+{
 private:
     LogLevel m_level;
     bool m_has_color;
 
-    template <typename... Args> void log(LogLevel level, Args &&...args) {
+    template <typename... Args>
+    void
+    log(LogLevel level, Args &&...args)
+    {
         if (level < m_level)
             return;
 
@@ -56,23 +69,38 @@ private:
 public:
     Logger(LogLevel level) : m_level(level), m_has_color(is_tty()) {};
 
-    template <typename... Args> void trace(Args &&...args) {
+    template <typename... Args>
+    void
+    trace(Args &&...args)
+    {
         log(LogLevel::Trace, std::forward<Args>(args)...);
     }
 
-    template <typename... Args> void debug(Args &&...args) {
+    template <typename... Args>
+    void
+    debug(Args &&...args)
+    {
         log(LogLevel::Debug, std::forward<Args>(args)...);
     }
 
-    template <typename... Args> void info(Args &&...args) {
+    template <typename... Args>
+    void
+    info(Args &&...args)
+    {
         log(LogLevel::Info, std::forward<Args>(args)...);
     }
 
-    template <typename... Args> void warn(Args &&...args) {
+    template <typename... Args>
+    void
+    warn(Args &&...args)
+    {
         log(LogLevel::Warn, std::forward<Args>(args)...);
     }
 
-    template <typename... Args> void error(Args &&...args) {
+    template <typename... Args>
+    void
+    error(Args &&...args)
+    {
         log(LogLevel::Error, std::forward<Args>(args)...);
     }
 };

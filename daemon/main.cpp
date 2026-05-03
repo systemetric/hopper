@@ -5,7 +5,9 @@
 #include "hopper/daemon/daemon.hpp"
 #include "hopper/daemon/logging.hpp"
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
     hopper::LogLevel log_level = hopper::LogLevel::Debug;
 
     char *l = getenv("HOPPER_LOG_LEVEL");

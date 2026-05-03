@@ -32,4 +32,3 @@ ssize_t hopper_read(struct hopper_pipe *pipe, void *dst, size_t len);
 ssize_t hopper_write(struct hopper_pipe *pipe, void *src, size_t len);
 
 #endif // hopper_h_INCLUDED
-

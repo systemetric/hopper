@@ -6,12 +6,14 @@
 
 #include "hopper/daemon/marker.hpp"
 
-namespace hopper {
+namespace hopper
+{
 
 // Opaque class, see hopper/server/pipe.hpp
 class HopperPipe;
 
-class HopperBuffer {
+class HopperBuffer
+{
 private:
     std::vector<std::byte> m_buf;
     std::vector<BufferMarker *> m_markers;
@@ -33,7 +35,11 @@ public:
     size_t max_write();
     size_t max_read(BufferMarker *marker);
 
-    size_t edge() { return m_edge; }
+    size_t
+    edge()
+    {
+        return m_edge;
+    }
 };
 
 }; // namespace hopper

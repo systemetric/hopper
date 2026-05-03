@@ -9,9 +9,12 @@
 #include <string>
 #include <system_error>
 
-namespace hopper {
+namespace hopper
+{
 
-inline void throw_errno(const std::string &msg) {
+inline void
+throw_errno(const std::string &msg)
+{
     std::stringstream ss;
     ss << msg << ": " << std::strerror(errno);
     throw std::system_error(errno, std::generic_category(), ss.str());

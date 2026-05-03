@@ -9,12 +9,14 @@
 #include "hopper/daemon/endpoint.hpp"
 #include "hopper/daemon/util.hpp"
 
-namespace hopper {
+namespace hopper
+{
 
 HopperDaemon::HopperDaemon(std::filesystem::path path, Logger &logger,
                            int max_events, int timeout)
     : m_max_events(max_events), m_timeout(timeout), m_path(path),
-      m_logger(logger) {
+      m_logger(logger)
+{
     if (!std::filesystem::exists(path)) {
         std::filesystem::create_directories(path);
     }
@@ -28,12 +30,15 @@ HopperDaemon::HopperDaemon(std::filesystem::path path, Logger &logger,
     setup_inotify();
 }
 
-HopperDaemon::~HopperDaemon() {
+HopperDaemon::~HopperDaemon()
+{
     for (const auto &[_, endpoint] : m_endpoints)
         delete endpoint;
 }
 
-void HopperDaemon::process_events(struct epoll_event *events, int n_events) {
+void
+HopperDaemon::process_events(struct epoll_event *events, int n_events)
+{
     for (int i = 0; i < n_events; i++) {
         struct epoll_event ev = events[i];
 
@@ -56,7 +61,9 @@ void HopperDaemon::process_events(struct epoll_event *events, int n_events) {
     }
 }
 
-int HopperDaemon::run() {
+int
+HopperDaemon::run()
+{
     int res = 0;
 
     setup_root_endpoints();

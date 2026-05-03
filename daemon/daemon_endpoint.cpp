@@ -2,9 +2,12 @@
 #include "hopper/daemon/util.hpp"
 #include <filesystem>
 
-namespace hopper {
+namespace hopper
+{
 
-uint32_t HopperDaemon::create_endpoint(const std::filesystem::path &path) {
+uint32_t
+HopperDaemon::create_endpoint(const std::filesystem::path &path)
+{
     uint32_t endpoint_id = next_endpoint_id();
     if (endpoint_id == 0)
         return 0;
@@ -47,7 +50,9 @@ uint32_t HopperDaemon::create_endpoint(const std::filesystem::path &path) {
     return endpoint_id;
 }
 
-void HopperDaemon::delete_endpoint(uint32_t id) {
+void
+HopperDaemon::delete_endpoint(uint32_t id)
+{
     if (!m_endpoints.contains(id))
         return;
 
@@ -59,7 +64,9 @@ void HopperDaemon::delete_endpoint(uint32_t id) {
     m_endpoints.erase(id);
 }
 
-void HopperDaemon::delete_endpoint(const std::filesystem::path &path) {
+void
+HopperDaemon::delete_endpoint(const std::filesystem::path &path)
+{
     for (const auto &[_, endpoint] : m_endpoints) {
         if (endpoint->path() == path) {
             delete_endpoint(endpoint->id());
@@ -68,7 +75,9 @@ void HopperDaemon::delete_endpoint(const std::filesystem::path &path) {
     }
 }
 
-HopperEndpoint *HopperDaemon::endpoint_by_watch(int watch) {
+HopperEndpoint *
+HopperDaemon::endpoint_by_watch(int watch)
+{
     for (const auto &[_, endpoint] : m_endpoints)
         if (endpoint->watch_fd() == watch)
             return endpoint;
@@ -76,14 +85,17 @@ HopperEndpoint *HopperDaemon::endpoint_by_watch(int watch) {
 }
 
 HopperEndpoint *
-HopperDaemon::endpoint_by_path(const std::filesystem::path &path) {
+HopperDaemon::endpoint_by_path(const std::filesystem::path &path)
+{
     for (const auto &[_, endpoint] : m_endpoints)
         if (endpoint->path() == path)
             return endpoint;
     return nullptr;
 }
 
-void HopperDaemon::setup_root_endpoints() {
+void
+HopperDaemon::setup_root_endpoints()
+{
     // iter over all directories and add them as endpoints
     for (const auto &dir_entry : std::filesystem::directory_iterator{m_path}) {
         const auto &p = dir_entry.path();

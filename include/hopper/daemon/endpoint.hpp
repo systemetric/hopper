@@ -8,9 +8,11 @@
 #include "hopper/daemon/logging.hpp"
 #include "hopper/daemon/pipe.hpp"
 
-namespace hopper {
+namespace hopper
+{
 
-class HopperEndpoint {
+class HopperEndpoint
+{
 private:
     std::unordered_map<uint64_t, HopperPipe *> m_inputs;
     std::unordered_map<uint64_t, HopperPipe *> m_outputs;
@@ -21,7 +23,9 @@ private:
     HopperBuffer m_buffer{};
 
     uint64_t m_last_pipe_id = 1;
-    uint64_t next_pipe_id(uint8_t type) {
+    uint64_t
+    next_pipe_id(uint8_t type)
+    {
         if (m_last_pipe_id > ((1ULL << 39) - 1))
             return 0;
 
@@ -59,19 +63,40 @@ public:
 
     HopperPipe *pipe_by_path(const std::filesystem::path &path);
 
-    const std::filesystem::path &path() { return m_path; }
-    const std::string &name() { return m_name; }
-    const std::unordered_map<uint64_t, HopperPipe *> inputs() {
+    const std::filesystem::path &
+    path()
+    {
+        return m_path;
+    }
+    const std::string &
+    name()
+    {
+        return m_name;
+    }
+    const std::unordered_map<uint64_t, HopperPipe *>
+    inputs()
+    {
         return m_inputs;
     }
-    const std::unordered_map<uint64_t, HopperPipe *> outputs() {
+    const std::unordered_map<uint64_t, HopperPipe *>
+    outputs()
+    {
         return m_outputs;
     }
-    int id() { return m_id; }
-    int watch_fd() { return m_watch_fd; }
+    int
+    id()
+    {
+        return m_id;
+    }
+    int
+    watch_fd()
+    {
+        return m_watch_fd;
+    }
 
-    friend std::ostream &operator<<(std::ostream &os,
-                                    HopperEndpoint &endpoint) {
+    friend std::ostream &
+    operator<<(std::ostream &os, HopperEndpoint &endpoint)
+    {
         os << endpoint.m_name << "(" << endpoint.m_id << ")";
         return os;
     }

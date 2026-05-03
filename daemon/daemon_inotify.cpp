@@ -5,9 +5,12 @@
 #include <limits.h>
 #include <unistd.h>
 
-namespace hopper {
+namespace hopper
+{
 
-void HopperDaemon::setup_inotify() {
+void
+HopperDaemon::setup_inotify()
+{
     if ((m_inotify_fd = inotify_init()) < 0)
         throw_errno("inotify_init");
 
@@ -24,7 +27,9 @@ void HopperDaemon::setup_inotify() {
         throw_errno("inotify_add_watch");
 }
 
-void HopperDaemon::handle_root_inotify(struct inotify_event *ev) {
+void
+HopperDaemon::handle_root_inotify(struct inotify_event *ev)
+{
     if (ev->mask & IN_DELETE_SELF) {
         m_logger.error("Hopper ", m_path, " got deleted, exiting... :(");
         _exit(1);
@@ -48,8 +53,10 @@ void HopperDaemon::handle_root_inotify(struct inotify_event *ev) {
     }
 }
 
-void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
-                                           HopperEndpoint *endpoint) {
+void
+HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
+                                      HopperEndpoint *endpoint)
+{
     if (ev->mask & IN_CREATE) {
         std::filesystem::path p = endpoint->path();
         p /= ev->name;
@@ -94,7 +101,9 @@ void HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
     }
 }
 
-void HopperDaemon::handle_inotify() {
+void
+HopperDaemon::handle_inotify()
+{
     char buf[4096];
     ssize_t size;
     struct inotify_event *iev = {};

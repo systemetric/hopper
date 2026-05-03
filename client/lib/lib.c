@@ -9,7 +9,9 @@
 
 #include "hopper/hopper.h"
 
-static int get_open_flags(int flags) {
+static int
+get_open_flags(int flags)
+{
     int open_flags = 0;
 
     if (flags & HOPPER_IN)
@@ -22,13 +24,17 @@ static int get_open_flags(int flags) {
     return open_flags;
 }
 
-static char *get_endpoint_path(struct hopper_pipe *pipe) {
+static char *
+get_endpoint_path(struct hopper_pipe *pipe)
+{
     char *path = (char *)malloc(sizeof(char) * PATH_MAX);
     sprintf(path, "%s/%s", pipe->hopper, pipe->endpoint);
     return path;
 }
 
-static char *get_pipe_path(struct hopper_pipe *pipe) {
+static char *
+get_pipe_path(struct hopper_pipe *pipe)
+{
     char *path = (char *)malloc(sizeof(char) * PATH_MAX);
     const char *suffix = (pipe->flags & HOPPER_IN ? "in" : "out");
 
@@ -39,7 +45,9 @@ static char *get_pipe_path(struct hopper_pipe *pipe) {
     return path;
 }
 
-int hopper_open(struct hopper_pipe *pipe) {
+int
+hopper_open(struct hopper_pipe *pipe)
+{
     int res = 0;
 
     if (pipe->name == NULL || pipe->endpoint == NULL || pipe->hopper == NULL) {
@@ -101,7 +109,9 @@ cleanup:
     return res;
 }
 
-int hopper_close(struct hopper_pipe *pipe) {
+int
+hopper_close(struct hopper_pipe *pipe)
+{
     if (pipe->fd == -1)
         return 0;
 
@@ -116,17 +126,20 @@ int hopper_close(struct hopper_pipe *pipe) {
     return 0;
 }
 
-ssize_t hopper_read(struct hopper_pipe *pipe, void *dst, size_t len) {
+ssize_t
+hopper_read(struct hopper_pipe *pipe, void *dst, size_t len)
+{
     ssize_t res = read(pipe->fd, dst, len);
     if (res < 0 && errno == EWOULDBLOCK)
         return 0; // EWOULDBLOCK isn't an error for non-block pipes
     return res;
 }
 
-ssize_t hopper_write(struct hopper_pipe *pipe, void *src, size_t len) {
+ssize_t
+hopper_write(struct hopper_pipe *pipe, void *src, size_t len)
+{
     ssize_t res = write(pipe->fd, src, len);
     if (res < 0 && errno == EWOULDBLOCK)
         return 0; // EWOULDBLOCK isn't an error for non-block pipes
     return res;
 }
-

@@ -12,17 +12,21 @@
 #include "hopper/daemon/logging.hpp"
 #include "hopper/daemon/pipe.hpp"
 
-namespace hopper {
+namespace hopper
+{
 
 constexpr uint64_t INOTIFY_DATA = 0x1;
 
-class HopperDaemon {
+class HopperDaemon
+{
 private:
     std::unordered_map<uint32_t, HopperEndpoint *> m_endpoints;
 
     // endpoint IDs are 24 bit
     uint32_t m_last_endpoint_id = 1;
-    uint32_t next_endpoint_id() {
+    uint32_t
+    next_endpoint_id()
+    {
         if (m_last_endpoint_id > ((1ULL << 24) - 1))
             return 0;
 

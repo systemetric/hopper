@@ -4,7 +4,8 @@
 #include "hopper/daemon/pipe.hpp"
 #include "hopper/daemon/util.hpp"
 
-namespace hopper {
+namespace hopper
+{
 
 /* HopperPipe */
 
@@ -12,17 +13,21 @@ HopperPipe::HopperPipe(uint64_t id, const std::string &endpoint_name,
                        PipeType type, std::filesystem::path path,
                        BufferMarker *marker)
     : m_marker(marker), m_type(type), m_path(path),
-      m_endpoint_name(endpoint_name), m_id(id) {
+      m_endpoint_name(endpoint_name), m_id(id)
+{
     m_name = path.replace_extension("").filename();
     open_pipe();
 }
 
-HopperPipe::~HopperPipe() {
+HopperPipe::~HopperPipe()
+{
     if (m_fd != -1)
         close(m_fd);
 }
 
-int HopperPipe::open_pipe() {
+int
+HopperPipe::open_pipe()
+{
     if (m_status == PipeStatus::ACTIVE)
         return 1;
 
@@ -48,7 +53,9 @@ int HopperPipe::open_pipe() {
     return 1;
 }
 
-void HopperPipe::close_pipe() {
+void
+HopperPipe::close_pipe()
+{
     if (m_status == PipeStatus::INACTIVE)
         return;
 
@@ -58,7 +65,9 @@ void HopperPipe::close_pipe() {
         close(m_fd);
 }
 
-size_t HopperPipe::write_pipe(void *src, size_t len, bool *more) {
+size_t
+HopperPipe::write_pipe(void *src, size_t len, bool *more)
+{
     if (m_type == PipeType::IN)
         return -1;
 
@@ -89,7 +98,9 @@ size_t HopperPipe::write_pipe(void *src, size_t len, bool *more) {
     return done_len;
 }
 
-size_t HopperPipe::read_pipe(void *dst, size_t len, bool *more) {
+size_t
+HopperPipe::read_pipe(void *dst, size_t len, bool *more)
+{
     if (m_type == PipeType::OUT)
         return -1;
 

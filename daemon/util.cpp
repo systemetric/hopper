@@ -1,8 +1,11 @@
 #include "hopper/daemon/util.hpp"
 
-namespace hopper {
+namespace hopper
+{
 
-PipeType detect_pipe_type(const std::filesystem::path &path) {
+PipeType
+detect_pipe_type(const std::filesystem::path &path)
+{
     if (!path.has_extension() || !std::filesystem::is_fifo(path))
         return PipeType::NONE;
 

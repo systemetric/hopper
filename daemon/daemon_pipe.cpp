@@ -1,9 +1,12 @@
 #include "hopper/daemon/daemon.hpp"
 #include "hopper/daemon/util.hpp"
 
-namespace hopper {
+namespace hopper
+{
 
-void HopperDaemon::remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id) {
+void
+HopperDaemon::remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id)
+{
     PipeType type = (pipe_id & 0x1 ? PipeType::IN : PipeType::OUT);
     for (const auto &[id, pipe] :
          (type == PipeType::IN ? endpoint->inputs() : endpoint->outputs())) {
@@ -19,7 +22,9 @@ void HopperDaemon::remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id) {
     }
 }
 
-void HopperDaemon::add_pipe(HopperPipe *pipe) {
+void
+HopperDaemon::add_pipe(HopperPipe *pipe)
+{
     if (pipe == nullptr)
         return;
 
@@ -38,7 +43,9 @@ void HopperDaemon::add_pipe(HopperPipe *pipe) {
     m_logger.debug("UP ", *pipe);
 }
 
-void HopperDaemon::refresh_pipes() {
+void
+HopperDaemon::refresh_pipes()
+{
     // Try to open any inactive pipes again
     for (const auto &[_, endpoint] : m_endpoints) {
         for (const auto &[id, pipe] : endpoint->inputs()) {
