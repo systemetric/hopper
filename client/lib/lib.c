@@ -45,6 +45,27 @@ get_pipe_path(struct hopper_pipe *pipe)
     return path;
 }
 
+/// recursive directory creation, existing directories are ignored
+static int
+rmkdir(char *path, mode_t mode)
+{
+    char *s = path;
+    while (*s) {
+        if (*s == '/') {
+            *s = '\0';
+            if (mkdir(path, mode) < 0 && errno != EEXIST) {
+                *s = '/';
+                return -1;
+            }
+            *s = '/';
+        }
+        s++;
+    }
+    if (mkdir(path, mode) < 0 && errno != EEXIST)
+        return -1;
+    return 0;
+}
+
 int
 hopper_open(struct hopper_pipe *pipe)
 {
@@ -63,9 +84,9 @@ hopper_open(struct hopper_pipe *pipe)
     }
 
     char *endpoint_path = get_endpoint_path(pipe);
-    res = mkdir(endpoint_path, 0755);
+    res = rmkdir(endpoint_path, 0755);
     free(endpoint_path);
-    if (res == -1 && errno != EEXIST) {
+    if (res == -1) {
         pipe->fd = -1;
         return -1;
     }
