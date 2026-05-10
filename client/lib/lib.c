@@ -109,7 +109,7 @@ hopper_open(struct hopper_pipe *pipe)
     // acquire a file lock on the fifo, we don't want other things using it
     if (flock(fd, (pipe->flags & HOPPER_IN ? LOCK_EX : LOCK_SH) | LOCK_NB) !=
         0) {
-        if (errno == EWOULDBLOCK)
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
             errno = EBUSY; // this makes more sense for clients
 
         int errsv = errno; // preserve errno across close
@@ -133,34 +133,76 @@ cleanup:
 int
 hopper_close(struct hopper_pipe *pipe)
 {
+    int res = 0;
+
     if (pipe->fd == -1)
         return 0;
 
     if (flock(pipe->fd, LOCK_UN) != 0)
-        return -1;
+        res = -1;
 
     if (close(pipe->fd) != 0)
-        return -1;
+        res = -1;
 
     pipe->fd = -1;
 
-    return 0;
+    return res;
 }
 
 ssize_t
 hopper_read(struct hopper_pipe *pipe, void *dst, size_t len)
 {
-    ssize_t res = read(pipe->fd, dst, len);
-    if (res < 0 && errno == EWOULDBLOCK)
-        return 0; // EWOULDBLOCK isn't an error for non-block pipes
-    return res;
+    if (len == 0)
+        return 0;
+
+    for (;;) {
+        ssize_t res = read(pipe->fd, dst, len);
+
+        if (res > 0)
+            return res;
+
+        // only happens if hopper exited
+        if (res == 0) {
+            errno = EPIPE;
+            return -1;
+        }
+
+        // try again if interrupted
+        if (errno == EINTR)
+            continue;
+
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
+            return 0; // EWOULDBLOCK isn't an error for non-block pipes
+
+        return -1;
+    }
 }
 
 ssize_t
 hopper_write(struct hopper_pipe *pipe, void *src, size_t len)
 {
-    ssize_t res = write(pipe->fd, src, len);
-    if (res < 0 && errno == EWOULDBLOCK)
-        return 0; // EWOULDBLOCK isn't an error for non-block pipes
-    return res;
+    if (len == 0)
+        return 0;
+
+    for (;;) {
+        ssize_t res = write(pipe->fd, src, len);
+
+        if (res > 0)
+            return res;
+
+        // only happens if hopper exited
+        if (res == 0) {
+            errno = EPIPE;
+            return -1;
+        }
+
+        // try again if interrupted
+        if (errno == EINTR)
+            continue;
+
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
+            return 0; // EWOULDBLOCK isn't an error for non-block pipes
+
+        return -1;
+    }
 }

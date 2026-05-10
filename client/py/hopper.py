@@ -62,7 +62,7 @@ class HopperPipe:
         try:
             fcntl.flock(fd, (fcntl.LOCK_EX if self.type == HopperPipeType.IN else fcntl.LOCK_SH) | fcntl.LOCK_NB);
         except OSError as e:
-            if e.errno == errno.EWOULDBLOCK:
+            if e.errno == errno.EWOULDBLOCK || e.errno == errno.EAGAIN:
                 e.errno = errno.EBUSY
             errsv = e.errno
             os.close(fd)
@@ -71,27 +71,50 @@ class HopperPipe:
         self.fd = fd
 
     def close(self):
-        fcntl.flock(self.fd, fcntl.LOCK_UN)
-        os.close(self.fd)
-        self.fd = -1
+        try:
+            fcntl.flock(self.fd, fcntl.LOCK_UN)
+        except OSError:
+            pass
+        try
+            os.close(self.fd)
+        finally:
+            self.fd = -1
 
     def read(self, len: int):
-        try:
-            buf = os.read(self.fd, len)
-            return buf
-        except OSError as e:
-            if e.errno == errno.EWOULDBLOCK:
-                return b''
-            else:
-                raise e
+        if len == 0:
+            return b''
+
+        while True:
+            try:
+                buf = os.read(self.fd, len)
+                if buf == b'':
+                    raise OSError(errno=errno.EPIPE)
+                return buf
+            except OSError as e:
+                if e.errno == errno.EWOULDBLOCK || e.errno == errno.EAGAIN:
+                    return b''
+                elif e.errno == errno.EINTR:
+                    continue
+                else:
+                    raise e
 
     def write(self, buf: bytes):
-        try:
-            res = os.write(self.fd, buf)
-            return res
-        except OSError as e:
-            if e.errno == errno.EWOULDBLOCK:
-                return 0;
-            else:
-                raise e
+        if len(buf) == 0:
+            return
 
+        while True:
+            try:
+                res = os.write(self.fd, buf)
+                if res == 0:
+                    raise OSError(errno=errno.EPIPE)
+                return res
+            except OSError as e:
+                if e.errno == errno.EWOULDBLOCK || e.errno == errno.EAGAIN:
+                    return 0;
+                elif e.errno == errno.EINTR:
+                    continue
+                else:
+                    raise e
+
+    def is_open(self):
+        return self.fd != -1

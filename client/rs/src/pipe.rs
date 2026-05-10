@@ -122,7 +122,7 @@ impl Pipe {
     /// exist, it will be created.
     pub fn open(&mut self) -> Result<(), Error> {
         if self.is_open() {
-            self.close()?;
+            self.close();
         }
 
         let endpoint = self.get_endpoint_path();
@@ -158,11 +158,13 @@ impl Pipe {
             Err((fd, e)) => {
                 let _ = close(fd);
 
-                return Err(Error::Other(if e == Errno::EWOULDBLOCK {
-                    Errno::EBUSY // EBUSY makes more sense for clients
-                } else {
-                    e
-                }));
+                return Err(Error::Other(
+                    if e == Errno::EWOULDBLOCK || e == Errno::EAGAIN {
+                        Errno::EBUSY // EBUSY makes more sense for clients
+                    } else {
+                        e
+                    },
+                ));
             }
         };
 
@@ -173,48 +175,52 @@ impl Pipe {
 
     /// Read a buffer from the pipe
     pub fn read(&self, buf: &mut [u8]) -> Result<usize, Error> {
-        let lock = self.lock.as_ref().ok_or(Error::NotOpen)?;
-        let res = match read(lock.deref(), buf) {
-            Ok(s) => s,
-            Err(Errno::EWOULDBLOCK) => 0, // this isn't an error for non-block pipes
-            Err(e) => return Err(Error::Other(e)),
-        };
+        loop {
+            let lock = self.lock.as_ref().ok_or(Error::NotOpen)?;
+            let r = lock.deref();
+            let res = match read(r, buf) {
+                Ok(0) => return Err(Error::Other(Errno::EPIPE)),
+                Ok(s) => s,
+                #[allow(unreachable_patterns)]
+                Err(Errno::EWOULDBLOCK) | Err(Errno::EAGAIN) => 0, // this isn't an error for non-block pipes
+                Err(Errno::EINTR) => continue,
+                Err(e) => return Err(Error::Other(e)),
+            };
 
-        tracing::trace!("Read(res = {res})");
+            tracing::trace!("Read(res = {res})");
 
-        Ok(res)
+            return Ok(res);
+        }
     }
 
     /// Write a buffer to the pipe
     pub fn write(&self, buf: &[u8]) -> Result<usize, Error> {
-        let lock = self.lock.as_ref().ok_or(Error::NotOpen)?;
-        let res = match write(lock.deref(), buf) {
-            Ok(s) => s,
-            Err(Errno::EWOULDBLOCK) => 0, // this isn't an error for non-block pipes
-            Err(e) => return Err(Error::Other(e)),
-        };
+        loop {
+            let lock = self.lock.as_ref().ok_or(Error::NotOpen)?;
+            let res = match write(lock.deref(), buf) {
+                Ok(0) => return Err(Error::Other(Errno::EPIPE)),
+                Ok(s) => s,
+                #[allow(unreachable_patterns)]
+                Err(Errno::EWOULDBLOCK) | Err(Errno::EAGAIN) => 0, // this isn't an error for non-block pipes
+                Err(Errno::EINTR) => continue,
+                Err(e) => return Err(Error::Other(e)),
+            };
 
-        tracing::trace!("Write(res = {res})");
+            tracing::trace!("Write(res = {res})");
 
-        Ok(res)
+            return Ok(res);
+        }
     }
 
     /// Close the pipe, freeing all locks.
-    pub fn close(&mut self) -> Result<(), Error> {
+    pub fn close(&mut self) {
         tracing::debug!("Close");
 
         let lock = self.lock.take();
         if let Some(lock) = lock {
-            match lock.unlock() {
-                Ok(fd) => close(fd).map_err(Error::Other)?,
-                Err((lock, e)) => {
-                    self.lock = Some(lock);
-                    return Err(Error::Other(e));
-                }
-            }
+            // this closes automatically
+            std::mem::drop(lock);
         }
-
-        Ok(())
     }
 
     /// Check if the pipe is currently open
@@ -235,7 +241,6 @@ impl Pipe {
 
 impl Drop for Pipe {
     fn drop(&mut self) {
-        // we don't care if close fails, there's nothing we can do
         let _ = self.close();
     }
 }
