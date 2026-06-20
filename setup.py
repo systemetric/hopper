@@ -6,5 +6,5 @@ setup(
     packages=["hopper"],
     package_dir={"hopper": "client/py"},
     author="Nathan Gill",
-    author_email="nathan.j.gill@outlook.com",
+    author_email="n@ngill.net",
 )

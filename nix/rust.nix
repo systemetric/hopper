@@ -1,8 +1,8 @@
 { lib, rustPlatform }:
 
 let
-  cargoToml = builtins.fromTOML (builtins.readFile ../client/rs/Cargo.toml);
-  version = cargoToml.package.version;
+  cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
+  version = cargoToml.workspace.package.version;
 in
 rustPlatform.buildRustPackage {
   pname = "hopper";
