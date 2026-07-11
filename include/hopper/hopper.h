@@ -12,6 +12,7 @@ struct hopper_pipe {
     const char *name;
     const char *endpoint;
     const char *hopper;
+    gid_t gid;
     int fd;
     int flags;
 };

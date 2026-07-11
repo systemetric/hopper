@@ -10,11 +10,12 @@ class HopperPipeType(str, Enum):
 
 class HopperPipe:
     def __init__(self, type: HopperPipeType, name: str, endpoint: str,
-                    hopper: str = "", nonblock: bool = False):
+                    hopper: str = "", gid: int | None = None, nonblock: bool = False):
         self.type = type
         self.name = name
         self.endpoint = endpoint
         self.hopper = hopper
+        self.gid = gid
         self.nonblock = nonblock
         self.fd = -1
 
@@ -45,8 +46,19 @@ class HopperPipe:
             else:
                 raise ValueError("Hopper path not set, or HOPPER_PATH not available")
 
+        if self.gid == None:
+            try:
+                # set from env if possible
+                gid = int(os.getenv("HOPPER_GID"))
+                self.gid = gid
+            except ValueError:
+                pass
+
         endpoint_path = self._get_endpoint_path()
-        os.makedirs(endpoint_path, exist_ok=True)
+        os.makedirs(endpoint_path, mode=0o775, exist_ok=True)
+
+        if self.gid:
+            os.chown(endpoint_path, -1, self.gid)
 
         path = self._get_path()
 
@@ -56,13 +68,16 @@ class HopperPipe:
             if e.errno != errno.EEXIST:
                 raise e
 
+        if self.gid:
+            os.chown(path, -1, self.gid)
+
         open_flags = self._get_open_flags()
         fd = os.open(path, open_flags)
 
         try:
             fcntl.flock(fd, (fcntl.LOCK_EX if self.type == HopperPipeType.IN else fcntl.LOCK_SH) | fcntl.LOCK_NB);
         except OSError as e:
-            if e.errno == errno.EWOULDBLOCK || e.errno == errno.EAGAIN:
+            if e.errno == errno.EWOULDBLOCK or e.errno == errno.EAGAIN:
                 e.errno = errno.EBUSY
             errsv = e.errno
             os.close(fd)
@@ -75,7 +90,7 @@ class HopperPipe:
             fcntl.flock(self.fd, fcntl.LOCK_UN)
         except OSError:
             pass
-        try
+        try:
             os.close(self.fd)
         finally:
             self.fd = -1
@@ -91,7 +106,7 @@ class HopperPipe:
                     raise OSError(errno=errno.EPIPE)
                 return buf
             except OSError as e:
-                if e.errno == errno.EWOULDBLOCK || e.errno == errno.EAGAIN:
+                if e.errno == errno.EWOULDBLOCK or e.errno == errno.EAGAIN:
                     return b''
                 elif e.errno == errno.EINTR:
                     continue
@@ -109,7 +124,7 @@ class HopperPipe:
                     raise OSError(errno=errno.EPIPE)
                 return res
             except OSError as e:
-                if e.errno == errno.EWOULDBLOCK || e.errno == errno.EAGAIN:
+                if e.errno == errno.EWOULDBLOCK or e.errno == errno.EAGAIN:
                     return 0;
                 elif e.errno == errno.EINTR:
                     continue

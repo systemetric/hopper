@@ -84,17 +84,32 @@ hopper_open(struct hopper_pipe *pipe)
     }
 
     char *endpoint_path = get_endpoint_path(pipe);
-    res = rmkdir(endpoint_path, 0755);
-    free(endpoint_path);
+    res = rmkdir(endpoint_path, 0775);
     if (res == -1) {
+        free(endpoint_path);
         pipe->fd = -1;
         return -1;
     }
+
+    // i know .. but the kernel does it too
+    if (pipe->gid != (gid_t)-1 &&
+        (res = chown(endpoint_path, -1, pipe->gid)) == -1) {
+        free(endpoint_path);
+        pipe->fd = -1;
+        return -1;
+    }
+    free(endpoint_path);
 
     char *pipe_path = get_pipe_path(pipe);
     if (mkfifo(pipe_path, 0660) < 0 && errno != EEXIST) {
         // mkfifo failed in some way, preserve errno
         res = -1;
+        goto cleanup;
+    }
+
+    if (pipe->gid != (unsigned int)-1 &&
+        (res = chown(pipe_path, -1, pipe->gid)) == -1) {
+        pipe->fd = -1;
         goto cleanup;
     }
 

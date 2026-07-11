@@ -9,7 +9,7 @@ use nix::{
     errno::Errno,
     fcntl::{Flock, FlockArg, OFlag, open},
     sys::stat::Mode,
-    unistd::{close, mkfifo, read, write},
+    unistd::{Gid, close, mkfifo, read, write},
 };
 
 use crate::Error;
@@ -36,6 +36,7 @@ pub struct Pipe {
     name: String,
     endpoint: String,
     hopper: PathBuf,
+    gid: Option<u32>,
     lock: Option<Flock<OwnedFd>>,
 }
 
@@ -77,7 +78,13 @@ impl Pipe {
     /// A path to the local Hopper instance can be optionally specified. If
     /// not specified it will be read from the `HOPPER_PATH` environment variable
     /// at runtime, returning [`Error::HopperNotFound`] if it cannot be identified.
-    pub fn new<S, P>(mode: PipeMode, name: S, endpoint: S, hopper: Option<P>) -> Result<Self, Error>
+    pub fn new<S, P>(
+        mode: PipeMode,
+        name: S,
+        endpoint: S,
+        hopper: Option<P>,
+        gid: Option<u32>,
+    ) -> Result<Self, Error>
     where
         S: AsRef<str>,
         P: AsRef<Path>,
@@ -96,12 +103,21 @@ impl Pipe {
             )
         };
 
+        let gid = if let Some(g) = gid {
+            Some(g)
+        } else if let Ok(Ok(g)) = std::env::var("HOPPER_GID").map(|g| g.parse::<u32>()) {
+            Some(g)
+        } else {
+            None
+        };
+
         tracing::debug!(
-            "Init(mode = {:?}, name = {}, endpoint = {}, hopper = {:#?})",
+            "Init(mode = {:?}, name = {}, endpoint = {}, hopper = {:#?}, gid = {:#?})",
             mode,
             name.as_ref(),
             endpoint.as_ref(),
-            hopper
+            hopper,
+            gid
         );
 
         Ok(Self {
@@ -109,6 +125,7 @@ impl Pipe {
             name: name.as_ref().to_string(),
             endpoint: endpoint.as_ref().to_string(),
             hopper,
+            gid,
             lock: None,
         })
     }
@@ -128,15 +145,23 @@ impl Pipe {
         let endpoint = self.get_endpoint_path();
         std::fs::DirBuilder::new()
             .recursive(true)
-            .mode(0o755)
+            .mode(0o775)
             .create(&endpoint)
             .map_err(Error::Io)?;
+
+        if let Some(gid) = self.gid {
+            nix::unistd::chown(&endpoint, None, Some(Gid::from_raw(gid))).map_err(Error::Other)?;
+        }
 
         let pipe = self.get_pipe_path();
         match mkfifo(&pipe, Mode::from_bits_truncate(0o660)) {
             Ok(_) => {}
             Err(Errno::EEXIST) => {}
             Err(e) => return Err(Error::Other(e)),
+        }
+
+        if let Some(gid) = self.gid {
+            nix::unistd::chown(&pipe, None, Some(Gid::from_raw(gid))).map_err(Error::Other)?;
         }
 
         tracing::debug!("Open(path = {:#?})", pipe);
