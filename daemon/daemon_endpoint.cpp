@@ -28,6 +28,8 @@ HopperDaemon::create_endpoint(const std::filesystem::path &path)
     for (const auto &dir_entry : std::filesystem::directory_iterator{path}) {
         const auto &p = dir_entry.path();
 
+        check_target_mode(p);
+
         PipeType pipe_type = detect_pipe_type(p);
         if (pipe_type == PipeType::NONE && std::filesystem::is_directory(p)) {
             // nested endpoint
@@ -99,6 +101,8 @@ HopperDaemon::setup_root_endpoints()
     // iter over all directories and add them as endpoints
     for (const auto &dir_entry : std::filesystem::directory_iterator{m_path}) {
         const auto &p = dir_entry.path();
+
+        check_target_mode(p);
 
         if (std::filesystem::is_directory(p) && create_endpoint(p) == 0)
             m_logger.warn("Endpoint creation failed! Out of IDs?");

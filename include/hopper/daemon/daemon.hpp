@@ -42,6 +42,7 @@ private:
 
     std::filesystem::path m_path;
     Logger &m_logger;
+    unsigned int m_rq_gid;
 
     uint32_t create_endpoint(const std::filesystem::path &path);
     void delete_endpoint(const std::filesystem::path &path);
@@ -55,6 +56,7 @@ private:
     void handle_root_inotify(struct inotify_event *ev);
     void handle_endpoint_inotify(struct inotify_event *ev,
                                  HopperEndpoint *endpoint);
+    bool check_target_mode(const std::filesystem::path &path);
 
     void process_events(struct epoll_event *events, int n_events);
     void remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id);
@@ -63,7 +65,7 @@ private:
 
 public:
     HopperDaemon(std::filesystem::path path, Logger &logger,
-                 int max_events = 64, int m_timeout = 250);
+                 unsigned int rq_gid, int max_events = 64, int m_timeout = 250);
     ~HopperDaemon();
 
     int run();

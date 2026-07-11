@@ -1,4 +1,5 @@
 #include "hopper/daemon/daemon.hpp"
+#include "hopper/daemon/endpoint.hpp"
 #include "hopper/daemon/util.hpp"
 
 #include <filesystem>
@@ -35,31 +36,30 @@ HopperDaemon::handle_root_inotify(struct inotify_event *ev)
         _exit(1);
     }
 
+    std::filesystem::path p = m_path;
+    p /= ev->name;
+
     if (ev->mask & IN_CREATE) {
-        std::filesystem::path p = m_path;
-        p /= ev->name;
+        check_target_mode(p);
 
         // only directories can be endpoints
         if (std::filesystem::is_directory(p) && create_endpoint(p) == 0)
             m_logger.warn("Endpoint creation failed! Out of IDs?");
     }
 
-    if (ev->mask & IN_DELETE) {
-        std::filesystem::path p = m_path;
-        p /= ev->name;
-
-        if (std::filesystem::is_directory(p))
-            delete_endpoint(p);
-    }
+    if (ev->mask & IN_DELETE && std::filesystem::is_directory(p))
+        delete_endpoint(p);
 }
 
 void
 HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
                                       HopperEndpoint *endpoint)
 {
+    std::filesystem::path p = endpoint->path();
+    p /= ev->name;
+
     if (ev->mask & IN_CREATE) {
-        std::filesystem::path p = endpoint->path();
-        p /= ev->name;
+        check_target_mode(p);
 
         PipeType pipe_type = detect_pipe_type(p);
         if (pipe_type == PipeType::NONE && ev->mask & IN_ISDIR) {
@@ -81,9 +81,6 @@ HopperDaemon::handle_endpoint_inotify(struct inotify_event *ev,
     }
 
     if (ev->mask & IN_DELETE) {
-        std::filesystem::path p = endpoint->path();
-        p /= ev->name;
-
         if (ev->mask & IN_ISDIR) {
             // nested endpoint
             delete_endpoint(p);
