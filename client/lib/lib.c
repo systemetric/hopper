@@ -83,6 +83,9 @@ hopper_open(struct hopper_pipe *pipe)
         return -1;
     }
 
+    // probably required to set group write bit
+    umask(S_IWOTH | S_IROTH);
+
     char *endpoint_path = get_endpoint_path(pipe);
     res = rmkdir(endpoint_path, 0775);
     if (res == -1) {

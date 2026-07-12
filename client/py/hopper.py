@@ -54,6 +54,8 @@ class HopperPipe:
             except ValueError:
                 pass
 
+        os.umask(os.S_IROTH | os.S_IWOTH)
+
         endpoint_path = self._get_endpoint_path()
         os.makedirs(endpoint_path, mode=0o775, exist_ok=True)
 

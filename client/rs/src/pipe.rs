@@ -142,6 +142,8 @@ impl Pipe {
             self.close();
         }
 
+        nix::sys::stat::umask(Mode::S_IROTH | Mode::S_IWOTH);
+
         let endpoint = self.get_endpoint_path();
         std::fs::DirBuilder::new()
             .recursive(true)
