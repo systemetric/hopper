@@ -27,7 +27,7 @@ main(int argc, char *argv[])
         long lgid = strtol(sgid, nullptr, 10);
 
         // gid_t is typically an unsigned int
-        if (errno != 0 && lgid >= 0 && lgid <= UINT_MAX)
+        if (errno == 0 && lgid >= 0 && lgid <= UINT_MAX)
             tgt_gid = lgid;
     }
 
