@@ -1,4 +1,5 @@
 import os
+import stat
 import fcntl
 import errno
 
@@ -54,13 +55,17 @@ class HopperPipe:
             except ValueError:
                 pass
 
-        os.umask(os.S_IROTH | os.S_IWOTH)
+        os.umask(stat.S_IROTH | stat.S_IWOTH)
 
         endpoint_path = self._get_endpoint_path()
         os.makedirs(endpoint_path, mode=0o775, exist_ok=True)
 
         if self.gid:
-            os.chown(endpoint_path, -1, self.gid)
+            try:
+                os.chown(endpoint_path, -1, self.gid)
+            except:
+                # was probably owned by somebody else already
+                pass
 
         path = self._get_path()
 
@@ -71,7 +76,10 @@ class HopperPipe:
                 raise e
 
         if self.gid:
-            os.chown(path, -1, self.gid)
+            try:
+                os.chown(path, -1, self.gid)
+            except:
+                pass
 
         open_flags = self._get_open_flags()
         fd = os.open(path, open_flags)

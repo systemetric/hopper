@@ -95,12 +95,8 @@ hopper_open(struct hopper_pipe *pipe)
     }
 
     // i know .. but the kernel does it too
-    if (pipe->gid != (gid_t)-1 &&
-        (res = chown(endpoint_path, -1, pipe->gid)) == -1) {
-        free(endpoint_path);
-        pipe->fd = -1;
-        return -1;
-    }
+    if (pipe->gid != (gid_t)-1)
+        res = chown(endpoint_path, -1, pipe->gid);
     free(endpoint_path);
 
     char *pipe_path = get_pipe_path(pipe);
@@ -110,11 +106,8 @@ hopper_open(struct hopper_pipe *pipe)
         goto cleanup;
     }
 
-    if (pipe->gid != (unsigned int)-1 &&
-        (res = chown(pipe_path, -1, pipe->gid)) == -1) {
-        pipe->fd = -1;
-        goto cleanup;
-    }
+    if (pipe->gid != (unsigned int)-1)
+        res = chown(pipe_path, -1, pipe->gid);
 
     int open_flags = get_open_flags(pipe->flags);
     int fd = open(pipe_path, open_flags);

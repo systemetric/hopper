@@ -152,7 +152,8 @@ impl Pipe {
             .map_err(Error::Io)?;
 
         if let Some(gid) = self.gid {
-            nix::unistd::chown(&endpoint, None, Some(Gid::from_raw(gid))).map_err(Error::Other)?;
+            let _ =
+                nix::unistd::chown(&endpoint, None, Some(Gid::from_raw(gid))).map_err(Error::Other);
         }
 
         let pipe = self.get_pipe_path();
@@ -163,7 +164,7 @@ impl Pipe {
         }
 
         if let Some(gid) = self.gid {
-            nix::unistd::chown(&pipe, None, Some(Gid::from_raw(gid))).map_err(Error::Other)?;
+            let _ = nix::unistd::chown(&pipe, None, Some(Gid::from_raw(gid))).map_err(Error::Other);
         }
 
         tracing::debug!("Open(path = {:#?})", pipe);
