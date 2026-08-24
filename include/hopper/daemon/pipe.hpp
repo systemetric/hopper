@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <string>
+#include <sys/stat.h>
 
 #include "hopper/daemon/marker.hpp"
 
@@ -34,10 +35,12 @@ private:
 
     int m_fd = -1;
     uint64_t m_id;
+    ino_t m_inode = 0;
 
 public:
     HopperPipe(uint64_t id, const std::string &endpoint_name, PipeType type,
-               std::filesystem::path path, BufferMarker *marker = nullptr);
+               std::filesystem::path path, ino_t inode,
+               BufferMarker *marker = nullptr);
     ~HopperPipe();
 
     int open_pipe();
@@ -79,6 +82,11 @@ public:
     fd()
     {
         return m_fd;
+    }
+    ino_t
+    inode()
+    {
+        return m_inode;
     }
 
     friend std::ostream &

@@ -19,7 +19,7 @@ HopperDaemon::HopperDaemon(std::filesystem::path path, Logger &logger,
       m_logger(logger), m_rq_gid(rq_gid)
 {
     umask(S_IROTH | S_IWOTH);
-    
+
     if (!std::filesystem::exists(path))
         std::filesystem::create_directories(path);
 

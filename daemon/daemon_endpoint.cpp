@@ -1,6 +1,7 @@
 #include "hopper/daemon/daemon.hpp"
 #include "hopper/daemon/util.hpp"
 #include <filesystem>
+#include <sys/stat.h>
 
 namespace hopper
 {
@@ -8,6 +9,13 @@ namespace hopper
 uint32_t
 HopperDaemon::create_endpoint(const std::filesystem::path &path)
 {
+    struct stat sb = {};
+    if (stat(path.c_str(), &sb) == -1)
+        throw_errno("stat");
+
+    if (this->has_inode(sb.st_ino))
+        return 0;
+
     uint32_t endpoint_id = next_endpoint_id();
     if (endpoint_id == 0)
         return 0;
@@ -18,8 +26,8 @@ HopperDaemon::create_endpoint(const std::filesystem::path &path)
         return 0;
 
     auto name = path.lexically_relative(m_path);
-    auto *endpoint =
-        new HopperEndpoint(endpoint_id, inotify_watch_fd, path, name, m_logger);
+    auto *endpoint = new HopperEndpoint(endpoint_id, inotify_watch_fd, path,
+                                        name, sb.st_ino, m_logger);
     m_endpoints[endpoint_id] = endpoint;
 
     m_logger.debug("CREATE ", *endpoint);
@@ -107,6 +115,15 @@ HopperDaemon::setup_root_endpoints()
         if (std::filesystem::is_directory(p) && create_endpoint(p) == 0)
             m_logger.warn("Endpoint creation failed! Out of IDs?");
     }
+}
+
+bool
+HopperDaemon::has_inode(ino_t inode)
+{
+    for (const auto &[_, endpoint] : m_endpoints)
+        if (endpoint->inode() == inode)
+            return true;
+    return false;
 }
 
 }; // namespace hopper

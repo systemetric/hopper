@@ -3,6 +3,7 @@
 
 #include <sys/epoll.h>
 #include <sys/inotify.h>
+#include <sys/stat.h>
 
 #include <cstdint>
 #include <filesystem>
@@ -62,6 +63,8 @@ private:
     void remove_pipe(HopperEndpoint *endpoint, uint64_t pipe_id);
     void add_pipe(HopperPipe *pipe);
     void refresh_pipes();
+
+    bool has_inode(ino_t inode);
 
 public:
     HopperDaemon(std::filesystem::path path, Logger &logger,

@@ -46,10 +46,13 @@ private:
     Logger &m_logger;
     uint32_t m_id;
     int m_watch_fd;
+    ino_t m_inode;
+
+    bool has_inode(ino_t inode);
 
 public:
     HopperEndpoint(uint32_t id, int watch_fd, std::filesystem::path path,
-                   std::string name, Logger &logger);
+                   std::string name, ino_t inode, Logger &logger);
     ~HopperEndpoint();
 
     void on_pipe_readable(uint64_t id);
@@ -92,6 +95,11 @@ public:
     watch_fd()
     {
         return m_watch_fd;
+    }
+    ino_t
+    inode()
+    {
+        return m_inode;
     }
 
     friend std::ostream &

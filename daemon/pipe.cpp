@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "hopper/daemon/pipe.hpp"
@@ -10,10 +11,10 @@ namespace hopper
 /* HopperPipe */
 
 HopperPipe::HopperPipe(uint64_t id, const std::string &endpoint_name,
-                       PipeType type, std::filesystem::path path,
+                       PipeType type, std::filesystem::path path, ino_t inode,
                        BufferMarker *marker)
     : m_marker(marker), m_type(type), m_path(path),
-      m_endpoint_name(endpoint_name), m_id(id)
+      m_endpoint_name(endpoint_name), m_id(id), m_inode(inode)
 {
     m_name = path.replace_extension("").filename();
     open_pipe();

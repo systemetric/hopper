@@ -12,9 +12,9 @@ namespace hopper
 
 HopperEndpoint::HopperEndpoint(uint32_t id, int watch_fd,
                                std::filesystem::path path, std::string name,
-                               Logger &logger)
+                               ino_t inode, Logger &logger)
     : m_path(path), m_name(name), m_logger(logger), m_id(id),
-      m_watch_fd(watch_fd)
+      m_watch_fd(watch_fd), m_inode(inode)
 {
 }
 
@@ -93,11 +93,20 @@ HopperEndpoint::add_input_pipe(const std::filesystem::path &path)
     if (!std::filesystem::is_fifo(path))
         return nullptr;
 
+    // get inode number for dedup
+    struct stat sb = {};
+    if (stat(path.c_str(), &sb) == -1)
+        throw_errno("stat");
+
+    if (this->has_inode(sb.st_ino))
+        return nullptr;
+
     uint64_t id = next_pipe_id(1); // Type 1 for input
     if (id == 0)                   // ID 0 is never valid
         return nullptr;
 
-    HopperPipe *p = new HopperPipe(id, m_name, PipeType::IN, path, nullptr);
+    HopperPipe *p =
+        new HopperPipe(id, m_name, PipeType::IN, path, sb.st_ino, nullptr);
     m_inputs[id] = p;
 
     m_logger.debug("OPEN ", *p);
@@ -111,12 +120,21 @@ HopperEndpoint::add_output_pipe(const std::filesystem::path &path)
     if (!std::filesystem::is_fifo(path))
         return nullptr;
 
+    // get inode number for dedup
+    struct stat sb = {};
+    if (stat(path.c_str(), &sb) == -1)
+        throw_errno("stat");
+
+    if (this->has_inode(sb.st_ino))
+        return nullptr;
+
     BufferMarker *marker = m_buffer.create_marker();
     uint64_t id = next_pipe_id(0); // Type 0 for output
     if (id == 0)
         return nullptr;
 
-    HopperPipe *p = new HopperPipe(id, m_name, PipeType::OUT, path, marker);
+    HopperPipe *p =
+        new HopperPipe(id, m_name, PipeType::OUT, path, sb.st_ino, marker);
     m_outputs[id] = p;
 
     m_logger.debug("OPEN ", *p);
@@ -169,6 +187,22 @@ HopperEndpoint::remove_output_pipe(const std::filesystem::path &path)
             break;
         }
     }
+}
+
+bool
+HopperEndpoint::has_inode(ino_t inode)
+{
+    for (const auto &[_, pipe] : m_inputs) {
+        if (pipe->inode() == inode)
+            return true;
+    }
+
+    for (const auto &[_, pipe] : m_outputs) {
+        if (pipe->inode() == inode)
+            return true;
+    }
+
+    return false;
 }
 
 }; // namespace hopper
