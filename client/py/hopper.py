@@ -10,8 +10,8 @@ class HopperPipeType(str, Enum):
     OUT = "out"
 
 class HopperPipe:
-    def __init__(self, type: HopperPipeType, name: str, endpoint: str,
-                    hopper: str = "", gid: int | None = None, nonblock: bool = False):
+    def __init__(self, type, name, endpoint,
+                    hopper = "", gid = None, nonblock = False):
         self.type = type
         self.name = name
         self.endpoint = endpoint
@@ -105,7 +105,7 @@ class HopperPipe:
         finally:
             self.fd = -1
 
-    def read(self, len: int):
+    def read(self, len):
         if len == 0:
             return b''
 
@@ -123,7 +123,7 @@ class HopperPipe:
                 else:
                     raise e
 
-    def write(self, buf: bytes):
+    def write(self, buf):
         if len(buf) == 0:
             return
 
